@@ -1,0 +1,79 @@
+##################################################################################################
+# checkout service and deployment
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout
+  labels:
+    app: checkout
+    service: checkout
+spec:
+  ports:
+  - port: 8087
+    targetPort: 8087
+    name: grpc
+  selector:
+    app: checkout
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onlineboutique-checkout
+  labels:
+    account: checkout
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+  labels:
+    app: checkout
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout
+  template:
+    metadata:
+      labels:
+        app: checkout
+    spec:
+      serviceAccountName: onlineboutique-checkout
+      containers:
+      - name: checkout
+        image: appnetorg/onlineboutique-grpc:latest
+        command: ["/app/onlineboutique"]
+        args: ["checkout"]
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8087
+---
+# volume and persistent volume claim of `checkout`
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: checkout-pv
+spec:
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  storageClassName: checkout-storage
+  hostPath:
+    path: /data/volumes/checkout-pv   # Where all the hard drives are mounted
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: checkout-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: checkout-storage
+  resources:
+    requests:
+      storage: 1Gi
+---

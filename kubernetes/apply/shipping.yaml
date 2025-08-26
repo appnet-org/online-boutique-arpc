@@ -1,0 +1,79 @@
+##################################################################################################
+# shipping service and deployment
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: shipping
+  labels:
+    app: shipping
+    service: shipping
+spec:
+  ports:
+  - port: 8085
+    targetPort: 8085
+    name: grpc
+  selector:
+    app: shipping
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onlineboutique-shipping
+  labels:
+    account: shipping
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipping
+  labels:
+    app: shipping
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shipping
+  template:
+    metadata:
+      labels:
+        app: shipping
+    spec:
+      serviceAccountName: onlineboutique-shipping
+      containers:
+      - name: shipping
+        image: appnetorg/onlineboutique-grpc:latest
+        command: ["/app/onlineboutique"]
+        args: ["shipping"]
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8088
+---
+# volume and persistent volume claim of `shipping`
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: shipping-pv
+spec:
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  storageClassName: shipping-storage
+  hostPath:
+    path: /data/volumes/shipping-pv   # Where all the hard drives are mounted
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shipping-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: shipping-storage
+  resources:
+    requests:
+      storage: 1Gi
+---
