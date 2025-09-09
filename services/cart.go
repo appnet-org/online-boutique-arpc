@@ -3,14 +3,14 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
-	"net"
+	"strconv"
 
+	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/serializer"
 	"github.com/redis/go-redis/v9"
-	"google.golang.org/grpc"
 
-	pb "github.com/appnetorg/online-boutique-arpc/protos/onlineboutique"
+	pb "github.com/appnetorg/online-boutique-arpc/proto"
 )
 
 // NewCartService returns a new server for the CartService
@@ -23,7 +23,6 @@ func NewCartService(port int) *CartService {
 // CartService implements the CartService
 type CartService struct {
 	port int
-	pb.CartServiceServer
 
 	cartRedisAddr string
 	rdb           *redis.Client // Redis client
@@ -38,19 +37,20 @@ func (s *CartService) Run() error {
 		Addr: s.cartRedisAddr,
 	})
 
-	srv := grpc.NewServer()
-	pb.RegisterCartServiceServer(srv, s)
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	serializer := &serializer.SymphonySerializer{}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
+
+	pb.RegisterCartServiceServer(server, s)
 	log.Printf("CartService running at port: %d", s.port)
-	return srv.Serve(lis)
+	server.Start()
+	return nil
 }
 
 // AddItem adds an item to the user's cart
-func (s *CartService) AddItem(ctx context.Context, req *pb.AddItemRequest) (*pb.Empty, error) {
+func (s *CartService) AddItem(ctx context.Context, req *pb.AddItemRequest) (*pb.Empty, context.Context, error) {
 	log.Printf("AddItem request for user_id = %v, product_id = %v, quantity = %v", req.GetUserId(), req.GetItem().GetProductId(), req.GetItem().GetQuantity())
 
 	userID := req.GetUserId()
@@ -63,12 +63,12 @@ func (s *CartService) AddItem(ctx context.Context, req *pb.AddItemRequest) (*pb.
 		cart = []*pb.CartItem{} // Empty cart
 	} else if err != nil {
 		log.Printf("Failed to fetch cart for user_id = %v: %v", userID, err)
-		return nil, err
+		return nil, ctx, err
 	} else {
 		err = json.Unmarshal([]byte(data), &cart)
 		if err != nil {
 			log.Printf("Failed to unmarshal cart for user_id = %v: %v", userID, err)
-			return nil, err
+			return nil, ctx, err
 		}
 	}
 
@@ -79,20 +79,20 @@ func (s *CartService) AddItem(ctx context.Context, req *pb.AddItemRequest) (*pb.
 	cartData, err := json.Marshal(cart)
 	if err != nil {
 		log.Printf("Failed to marshal cart for user_id = %v: %v", userID, err)
-		return nil, err
+		return nil, ctx, err
 	}
 
 	err = s.rdb.Set(ctx, userID, cartData, 0).Err()
 	if err != nil {
 		log.Printf("Failed to save cart for user_id = %v: %v", userID, err)
-		return nil, err
+		return nil, ctx, err
 	}
 
-	return &pb.Empty{}, nil
+	return &pb.Empty{}, ctx, nil
 }
 
 // GetCart retrieves the cart for a user
-func (s *CartService) GetCart(ctx context.Context, req *pb.GetCartRequest) (*pb.Cart, error) {
+func (s *CartService) GetCart(ctx context.Context, req *pb.GetCartRequest) (*pb.Cart, context.Context, error) {
 	log.Printf("GetCart request for user_id = %v", req.GetUserId())
 
 	userID := req.GetUserId()
@@ -101,34 +101,34 @@ func (s *CartService) GetCart(ctx context.Context, req *pb.GetCartRequest) (*pb.
 		return &pb.Cart{
 			UserId: userID,
 			Items:  []*pb.CartItem{},
-		}, nil
+		}, ctx, nil
 	} else if err != nil {
 		log.Printf("Failed to fetch cart for user_id = %v: %v", userID, err)
-		return nil, err
+		return nil, ctx, err
 	}
 
 	var cart []*pb.CartItem
 	err = json.Unmarshal([]byte(data), &cart)
 	if err != nil {
 		log.Printf("Failed to unmarshal cart for user_id = %v: %v", userID, err)
-		return nil, err
+		return nil, ctx, err
 	}
 
 	return &pb.Cart{
 		UserId: userID,
 		Items:  cart,
-	}, nil
+	}, ctx, nil
 }
 
 // EmptyCart clears the cart for a user
-func (s *CartService) EmptyCart(ctx context.Context, req *pb.EmptyCartRequest) (*pb.Empty, error) {
+func (s *CartService) EmptyCart(ctx context.Context, req *pb.EmptyCartRequest) (*pb.Empty, context.Context, error) {
 	log.Printf("EmptyCart request for user_id = %v", req.GetUserId())
 
 	err := s.rdb.Del(ctx, req.GetUserId()).Err()
 	if err != nil {
 		log.Printf("Failed to delete cart for user_id = %v: %v", req.GetUserId(), err)
-		return nil, err
+		return nil, ctx, err
 	}
 
-	return &pb.Empty{}, nil
+	return &pb.Empty{}, ctx, nil
 }

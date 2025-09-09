@@ -12,11 +12,13 @@ import (
 	"strings"
 	"time"
 
-	pb "github.com/appnetorg/online-boutique-arpc/protos/onlineboutique"
+	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
+	"github.com/appnet-org/arpc/pkg/serializer"
+	pb "github.com/appnetorg/online-boutique-arpc/proto"
 	"github.com/appnetorg/online-boutique-arpc/services/validator"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -64,25 +66,25 @@ type frontendServer struct {
 	port int
 
 	productCatalogSvcAddr string
-	productCatalogSvcConn *grpc.ClientConn
+	productCatalogClient  pb.ProductCatalogServiceClient
 
 	currencySvcAddr string
-	currencySvcConn *grpc.ClientConn
+	currencyClient  pb.CurrencyServiceClient
 
 	cartSvcAddr string
-	cartSvcConn *grpc.ClientConn
+	cartClient  pb.CartServiceClient
 
 	recommendationSvcAddr string
-	recommendationSvcConn *grpc.ClientConn
+	recommendationClient  pb.RecommendationServiceClient
 
 	checkoutSvcAddr string
-	checkoutSvcConn *grpc.ClientConn
+	checkoutClient  pb.CheckoutServiceClient
 
 	shippingSvcAddr string
-	shippingSvcConn *grpc.ClientConn
+	shippingClient  pb.ShippingServiceClient
 
 	adSvcAddr string
-	adSvcConn *grpc.ClientConn
+	adClient  pb.AdServiceClient
 
 	shoppingAssistantSvcAddr string
 }
@@ -104,14 +106,57 @@ func (fe *frontendServer) Run() error {
 	mustMapEnv(&fe.adSvcAddr, "AD_SERVICE_ADDR")
 	mustMapEnv(&fe.shoppingAssistantSvcAddr, "SHOPPING_ASSISTANT_SERVICE_ADDR")
 
-	ctx := context.Background()
-	mustConnGRPC(ctx, &fe.currencySvcConn, fe.currencySvcAddr)
-	mustConnGRPC(ctx, &fe.productCatalogSvcConn, fe.productCatalogSvcAddr)
-	mustConnGRPC(ctx, &fe.cartSvcConn, fe.cartSvcAddr)
-	mustConnGRPC(ctx, &fe.recommendationSvcConn, fe.recommendationSvcAddr)
-	mustConnGRPC(ctx, &fe.shippingSvcConn, fe.shippingSvcAddr)
-	mustConnGRPC(ctx, &fe.checkoutSvcConn, fe.checkoutSvcAddr)
-	mustConnGRPC(ctx, &fe.adSvcConn, fe.adSvcAddr)
+	// Create ARPC clients
+	serializer := &serializer.SymphonySerializer{}
+
+	// Currency client
+	currencyClient, err := rpc.NewClient(serializer, fe.currencySvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create currency aRPC client: %v", err)
+	}
+	fe.currencyClient = pb.NewCurrencyServiceClient(currencyClient)
+
+	// Product catalog client
+	productCatalogClient, err := rpc.NewClient(serializer, fe.productCatalogSvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create product catalog aRPC client: %v", err)
+	}
+	fe.productCatalogClient = pb.NewProductCatalogServiceClient(productCatalogClient)
+
+	// Cart client
+	cartClient, err := rpc.NewClient(serializer, fe.cartSvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create cart aRPC client: %v", err)
+	}
+	fe.cartClient = pb.NewCartServiceClient(cartClient)
+
+	// Recommendation client
+	recommendationClient, err := rpc.NewClient(serializer, fe.recommendationSvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create recommendation aRPC client: %v", err)
+	}
+	fe.recommendationClient = pb.NewRecommendationServiceClient(recommendationClient)
+
+	// Shipping client
+	shippingClient, err := rpc.NewClient(serializer, fe.shippingSvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create shipping aRPC client: %v", err)
+	}
+	fe.shippingClient = pb.NewShippingServiceClient(shippingClient)
+
+	// Checkout client
+	checkoutClient, err := rpc.NewClient(serializer, fe.checkoutSvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create checkout aRPC client: %v", err)
+	}
+	fe.checkoutClient = pb.NewCheckoutServiceClient(checkoutClient)
+
+	// Ad client
+	adClient, err := rpc.NewClient(serializer, fe.adSvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create ad aRPC client: %v", err)
+	}
+	fe.adClient = pb.NewAdServiceClient(adClient)
 
 	http.HandleFunc("/", fe.homeHandler)
 	http.HandleFunc("/cart/checkout", fe.placeOrderHandler)
@@ -225,7 +270,7 @@ func (fe *frontendServer) placeOrderHandler(w http.ResponseWriter, r *http.Reque
 	}
 	log.Println("placeOrderHandler: input validation successful")
 
-	order, err := pb.NewCheckoutServiceClient(fe.checkoutSvcConn).
+	order, err := fe.checkoutClient.
 		PlaceOrder(r.Context(), &pb.PlaceOrderRequest{
 			Email: payload.Email,
 			CreditCard: &pb.CreditCardInfo{
@@ -336,7 +381,7 @@ func (fe *frontendServer) addToCartHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (fe *frontendServer) getCurrencies(ctx context.Context, userID string) ([]string, error) {
-	currs, err := pb.NewCurrencyServiceClient(fe.currencySvcConn).
+	currs, err := fe.currencyClient.
 		GetSupportedCurrencies(ctx, &pb.EmptyUser{UserId: userID})
 	if err != nil {
 		return nil, err
@@ -351,29 +396,29 @@ func (fe *frontendServer) getCurrencies(ctx context.Context, userID string) ([]s
 }
 
 func (fe *frontendServer) getProducts(ctx context.Context, userID string) ([]*pb.Product, error) {
-	resp, err := pb.NewProductCatalogServiceClient(fe.productCatalogSvcConn).
+	resp, err := fe.productCatalogClient.
 		ListProducts(ctx, &pb.EmptyUser{UserId: userID})
 	return resp.GetProducts(), err
 }
 
 func (fe *frontendServer) getProduct(ctx context.Context, id string) (*pb.Product, error) {
-	resp, err := pb.NewProductCatalogServiceClient(fe.productCatalogSvcConn).
+	resp, err := fe.productCatalogClient.
 		GetProduct(ctx, &pb.GetProductRequest{Id: id})
 	return resp, err
 }
 
 func (fe *frontendServer) getCart(ctx context.Context, userID string) ([]*pb.CartItem, error) {
-	resp, err := pb.NewCartServiceClient(fe.cartSvcConn).GetCart(ctx, &pb.GetCartRequest{UserId: userID})
+	resp, err := fe.cartClient.GetCart(ctx, &pb.GetCartRequest{UserId: userID})
 	return resp.GetItems(), err
 }
 
 func (fe *frontendServer) emptyCart(ctx context.Context, userID string) error {
-	_, err := pb.NewCartServiceClient(fe.cartSvcConn).EmptyCart(ctx, &pb.EmptyCartRequest{UserId: userID})
+	_, err := fe.cartClient.EmptyCart(ctx, &pb.EmptyCartRequest{UserId: userID})
 	return err
 }
 
 func (fe *frontendServer) insertCart(ctx context.Context, userID, productID string, quantity int32) error {
-	_, err := pb.NewCartServiceClient(fe.cartSvcConn).AddItem(ctx, &pb.AddItemRequest{
+	_, err := fe.cartClient.AddItem(ctx, &pb.AddItemRequest{
 		UserId: userID,
 		Item: &pb.CartItem{
 			ProductId: productID,
@@ -386,7 +431,7 @@ func (fe *frontendServer) convertCurrency(ctx context.Context, money *pb.Money, 
 	if money.GetCurrencyCode() == currency {
 		return money, nil
 	}
-	return pb.NewCurrencyServiceClient(fe.currencySvcConn).
+	return fe.currencyClient.
 		Convert(ctx, &pb.CurrencyConversionRequest{
 			From:   money,
 			ToCode: currency,
@@ -394,7 +439,7 @@ func (fe *frontendServer) convertCurrency(ctx context.Context, money *pb.Money, 
 }
 
 func (fe *frontendServer) getShippingQuote(ctx context.Context, items []*pb.CartItem, currency string, userID string) (*pb.Money, error) {
-	quote, err := pb.NewShippingServiceClient(fe.shippingSvcConn).GetQuote(ctx,
+	quote, err := fe.shippingClient.GetQuote(ctx,
 		&pb.GetQuoteRequest{
 			Address: nil,
 			Items:   items})
@@ -406,7 +451,7 @@ func (fe *frontendServer) getShippingQuote(ctx context.Context, items []*pb.Cart
 }
 
 func (fe *frontendServer) getRecommendations(ctx context.Context, userID string, productIDs []string) ([]*pb.Product, error) {
-	resp, err := pb.NewRecommendationServiceClient(fe.recommendationSvcConn).ListRecommendations(ctx,
+	resp, err := fe.recommendationClient.ListRecommendations(ctx,
 		&pb.ListRecommendationsRequest{UserId: userID, ProductIds: productIDs})
 	if err != nil {
 		return nil, err
@@ -429,7 +474,7 @@ func (fe *frontendServer) getAd(ctx context.Context, ctxKeys []string, userID st
 	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*100)
 	defer cancel()
 
-	resp, err := pb.NewAdServiceClient(fe.adSvcConn).GetAds(ctx, &pb.AdRequest{
+	resp, err := fe.adClient.GetAds(ctx, &pb.AdRequest{
 		ContextKeys: ctxKeys,
 		UserId:      userID,
 	})

@@ -9,10 +9,12 @@ metadata:
     app: cart
     service: cart
 spec:
+  clusterIP: None
   ports:
   - port: 8081
     targetPort: 8081
-    name: grpc
+    name: arpc-cart
+    protocol: UDP
   selector:
     app: cart
 ---
@@ -42,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-cart
       containers:
       - name: cart
-        image: appnetorg/onlineboutique-grpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["cart"]
         imagePullPolicy: Always

@@ -7,12 +7,12 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
-	"net"
 	"strconv"
 
-	"google.golang.org/grpc"
+	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/serializer"
 
-	pb "github.com/appnetorg/online-boutique-arpc/protos/onlineboutique"
+	pb "github.com/appnetorg/online-boutique-arpc/proto"
 )
 
 const (
@@ -21,8 +21,7 @@ const (
 
 // CurrencyService implements the CurrencyService
 type CurrencyService struct {
-	port int
-	pb.CurrencyServiceServer
+	port          int
 	conversionMap map[string]float64
 }
 
@@ -46,19 +45,20 @@ func NewCurrencyService(port int) *CurrencyService {
 
 // Run starts the server
 func (s *CurrencyService) Run() error {
-	srv := grpc.NewServer()
-	pb.RegisterCurrencyServiceServer(srv, s)
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	serializer := &serializer.SymphonySerializer{}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
+
+	pb.RegisterCurrencyServiceServer(server, s)
 	log.Printf("CurrencyService running at port: %d", s.port)
-	return srv.Serve(lis)
+	server.Start()
+	return nil
 }
 
 // GetSupportedCurrencies returns a list of supported currency codes
-func (s *CurrencyService) GetSupportedCurrencies(ctx context.Context, req *pb.EmptyUser) (*pb.GetSupportedCurrenciesResponse, error) {
+func (s *CurrencyService) GetSupportedCurrencies(ctx context.Context, req *pb.EmptyUser) (*pb.GetSupportedCurrenciesResponse, context.Context, error) {
 	log.Printf("GetSupportedCurrencies request received")
 	keys := make([]string, 0, len(s.conversionMap))
 	for k := range s.conversionMap {
@@ -66,11 +66,11 @@ func (s *CurrencyService) GetSupportedCurrencies(ctx context.Context, req *pb.Em
 	}
 	return &pb.GetSupportedCurrenciesResponse{
 		CurrencyCodes: keys,
-	}, nil
+	}, ctx, nil
 }
 
 // Convert converts an amount of money from one currency to another
-func (s *CurrencyService) Convert(ctx context.Context, req *pb.CurrencyConversionRequest) (*pb.Money, error) {
+func (s *CurrencyService) Convert(ctx context.Context, req *pb.CurrencyConversionRequest) (*pb.Money, context.Context, error) {
 	log.Printf("Convert request: from = %v %v, to = %v", req.GetFrom().GetUnits(), req.GetFrom().GetCurrencyCode(), req.GetToCode())
 
 	from := req.GetFrom()
@@ -79,14 +79,14 @@ func (s *CurrencyService) Convert(ctx context.Context, req *pb.CurrencyConversio
 	// Convert: from -> EUR
 	fromRate, ok := s.conversionMap[from.GetCurrencyCode()]
 	if !ok {
-		return nil, fmt.Errorf("unsupported currency code: %v", from.GetCurrencyCode())
+		return nil, ctx, fmt.Errorf("unsupported currency code: %v", from.GetCurrencyCode())
 	}
 	euros := carry(float64(from.GetUnits())/fromRate, float64(from.GetNanos())/fromRate)
 
 	// Convert: EUR -> toCode
 	toRate, ok := s.conversionMap[toCode]
 	if !ok {
-		return nil, fmt.Errorf("unsupported currency code: %v", toCode)
+		return nil, ctx, fmt.Errorf("unsupported currency code: %v", toCode)
 	}
 	to := carry(float64(euros.Units)*toRate, float64(euros.Nanos)*toRate)
 	to.CurrencyCode = toCode
@@ -95,7 +95,7 @@ func (s *CurrencyService) Convert(ctx context.Context, req *pb.CurrencyConversio
 		CurrencyCode: to.CurrencyCode,
 		Units:        to.Units,
 		Nanos:        to.Nanos,
-	}, nil
+	}, ctx, nil
 }
 
 // carry handles decimal/fractional carrying for currency conversions.

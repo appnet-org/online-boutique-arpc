@@ -1,11 +1,13 @@
 # Build stage
-FROM golang:1.22 AS builder
+FROM golang:1.23.9 AS builder
 
 # Set the working directory inside the container
 WORKDIR /app
 
 # Copy only the necessary Go mod files to cache dependencies
 COPY go.mod go.sum ./
+# Copy proto directory since it's referenced in go.mod replace directive
+COPY proto/ proto/
 
 # Download and cache Go dependencies
 RUN go mod download

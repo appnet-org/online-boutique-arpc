@@ -9,10 +9,12 @@ metadata:
     app: productcatalog
     service: productcatalog
 spec:
+  clusterIP: None
   ports:
   - port: 8082
     targetPort: 8082
-    name: grpc
+    name: arpc-productcatalog
+    protocol: UDP
   selector:
     app: productcatalog
 ---
@@ -42,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-productcatalog
       containers:
       - name: productcatalog
-        image: appnetorg/onlineboutique-grpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["productcatalog"]
         imagePullPolicy: Always

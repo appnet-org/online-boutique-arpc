@@ -2,30 +2,28 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
-	"google.golang.org/grpc"
+	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/serializer"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	pb "github.com/appnetorg/online-boutique-arpc/protos/onlineboutique"
+	pb "github.com/appnetorg/online-boutique-arpc/proto"
 )
 
 // ProductCatalogService implements the ProductCatalogService
 type ProductCatalogService struct {
 	port    int
 	catalog pb.ListProductsResponse
-
-	pb.ProductCatalogServiceServer
 
 	mu            sync.RWMutex
 	extraLatency  time.Duration
@@ -104,21 +102,22 @@ func (s *ProductCatalogService) parseCatalog() []*pb.Product {
 	return s.catalog.Products
 }
 
-// Run starts the gRPC server
+// Run starts the ARPC server
 func (s *ProductCatalogService) Run() error {
-	srv := grpc.NewServer()
-	pb.RegisterProductCatalogServiceServer(srv, s)
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	serializer := &serializer.SymphonySerializer{}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
+
+	pb.RegisterProductCatalogServiceServer(server, s)
 	log.Printf("ProductCatalogService running at port: %d", s.port)
-	return srv.Serve(lis)
+	server.Start()
+	return nil
 }
 
 // ListProducts lists all available products
-func (s *ProductCatalogService) ListProducts(ctx context.Context, req *pb.EmptyUser) (*pb.ListProductsResponse, error) {
+func (s *ProductCatalogService) ListProducts(ctx context.Context, req *pb.EmptyUser) (*pb.ListProductsResponse, context.Context, error) {
 	log.Println("ListProducts: Received request")
 
 	time.Sleep(s.extraLatency)
@@ -129,11 +128,11 @@ func (s *ProductCatalogService) ListProducts(ctx context.Context, req *pb.EmptyU
 
 	log.Printf("ListProducts: Responding with %d products\n", len(response.Products))
 
-	return response, nil
+	return response, ctx, nil
 }
 
 // GetProduct retrieves a product by its ID
-func (s *ProductCatalogService) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.Product, error) {
+func (s *ProductCatalogService) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.Product, context.Context, error) {
 	log.Printf("GetProduct: Received request for product ID %s\n", req.Id)
 
 	time.Sleep(s.extraLatency)
@@ -148,15 +147,15 @@ func (s *ProductCatalogService) GetProduct(ctx context.Context, req *pb.GetProdu
 
 	if found == nil {
 		log.Printf("GetProduct: Product with ID %s not found\n", req.Id)
-		return nil, status.Errorf(codes.NotFound, "no product with ID %s", req.Id)
+		return nil, ctx, status.Errorf(codes.NotFound, "no product with ID %s", req.Id)
 	}
 
 	log.Printf("GetProduct: Found product with ID %s\n", found.Id)
-	return found, nil
+	return found, ctx, nil
 }
 
 // SearchProducts searches for products matching a query
-func (s *ProductCatalogService) SearchProducts(ctx context.Context, req *pb.SearchProductsRequest) (*pb.SearchProductsResponse, error) {
+func (s *ProductCatalogService) SearchProducts(ctx context.Context, req *pb.SearchProductsRequest) (*pb.SearchProductsResponse, context.Context, error) {
 	log.Printf("SearchProducts: Received request with query: %s\n", req.Query)
 
 	time.Sleep(s.extraLatency)
@@ -171,5 +170,5 @@ func (s *ProductCatalogService) SearchProducts(ctx context.Context, req *pb.Sear
 
 	log.Printf("SearchProducts: Search completed. Query: %s, Results: %d\n", req.Query, len(ps))
 
-	return &pb.SearchProductsResponse{Results: ps}, nil
+	return &pb.SearchProductsResponse{Results: ps}, ctx, nil
 }

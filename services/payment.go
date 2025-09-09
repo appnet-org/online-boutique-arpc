@@ -2,16 +2,16 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/serializer"
 	"github.com/google/uuid"
-	"google.golang.org/grpc"
 
-	pb "github.com/appnetorg/online-boutique-arpc/protos/onlineboutique"
+	pb "github.com/appnetorg/online-boutique-arpc/proto"
 )
 
 type InvalidCreditCardErr struct{}
@@ -79,24 +79,24 @@ func NewPaymentService(port int) *PaymentService {
 // PaymentService implements the PaymentService
 type PaymentService struct {
 	port int
-	pb.PaymentServiceServer
 }
 
 // Run starts the server
 func (s *PaymentService) Run() error {
-	srv := grpc.NewServer()
-	pb.RegisterPaymentServiceServer(srv, s)
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	serializer := &serializer.SymphonySerializer{}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
+
+	pb.RegisterPaymentServiceServer(server, s)
 	log.Printf("PaymentService running at port: %d", s.port)
-	return srv.Serve(lis)
+	server.Start()
+	return nil
 }
 
 // Charge processes a payment charge request
-func (s *PaymentService) Charge(ctx context.Context, req *pb.ChargeRequest) (*pb.ChargeResponse, error) {
+func (s *PaymentService) Charge(ctx context.Context, req *pb.ChargeRequest) (*pb.ChargeResponse, context.Context, error) {
 	log.Printf("Charge request received for amount: %v %v", req.GetAmount().GetCurrencyCode(), req.GetAmount().GetUnits())
 	log.Printf("Credit Card Info: Number ending in ****%s, Expiry: %02d/%04d",
 		req.GetCreditCard().GetCreditCardNumber()[len(req.GetCreditCard().GetCreditCardNumber())-4:],
@@ -106,12 +106,12 @@ func (s *PaymentService) Charge(ctx context.Context, req *pb.ChargeRequest) (*pb
 	transactionID, err := validateAndCharge(req.GetAmount(), req.GetCreditCard())
 	if err != nil {
 		log.Printf("Transaction failed: %v", err)
-		return nil, err
+		return nil, ctx, err
 	}
 
 	log.Printf("Transaction successful: %v", transactionID)
 
 	return &pb.ChargeResponse{
 		TransactionId: transactionID,
-	}, nil
+	}, ctx, nil
 }
