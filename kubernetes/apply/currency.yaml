@@ -9,10 +9,12 @@ metadata:
     app: currency
     service: currency
 spec:
+  clusterIP: None
   ports:
   - port: 8083
     targetPort: 8083
-    name: grpc
+    name: arpc-currency
+    protocol: UDP
   selector:
     app: currency
 ---
@@ -42,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-currency
       containers:
       - name: currency
-        image: appnetorg/onlineboutique-grpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["currency"]
         imagePullPolicy: Always

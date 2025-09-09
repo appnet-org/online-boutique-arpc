@@ -3,14 +3,14 @@ package services
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"html/template"
 	"log"
-	"net"
+	"strconv"
 
-	"google.golang.org/grpc"
+	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/serializer"
 
-	pb "github.com/appnetorg/online-boutique-arpc/protos/onlineboutique"
+	pb "github.com/appnetorg/online-boutique-arpc/proto"
 )
 
 // Embed the HTML template for the email
@@ -32,31 +32,31 @@ func NewEmailService(port int) *EmailService {
 // EmailService implements the EmailService
 type EmailService struct {
 	port int
-	pb.EmailServiceServer
 }
 
 // Run starts the server
 func (s *EmailService) Run() error {
-	srv := grpc.NewServer()
-	pb.RegisterEmailServiceServer(srv, s)
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	serializer := &serializer.SymphonySerializer{}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
+
+	pb.RegisterEmailServiceServer(server, s)
 	log.Printf("EmailService running at port: %d", s.port)
-	return srv.Serve(lis)
+	server.Start()
+	return nil
 }
 
 // SendOrderConfirmation sends an order confirmation email
-func (s *EmailService) SendOrderConfirmation(ctx context.Context, req *pb.SendOrderConfirmationRequest) (*pb.Empty, error) {
+func (s *EmailService) SendOrderConfirmation(ctx context.Context, req *pb.SendOrderConfirmationRequest) (*pb.Empty, context.Context, error) {
 	log.Printf("SendOrderConfirmation request received for email = %v", req.GetEmail())
 
 	// Generate email content using the template
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, req.GetOrder()); err != nil {
 		log.Printf("Error executing template: %v", err)
-		return nil, err
+		return nil, ctx, err
 	}
 	confirmation := buf.String()
 
@@ -66,5 +66,5 @@ func (s *EmailService) SendOrderConfirmation(ctx context.Context, req *pb.SendOr
 	// Replace this with actual email-sending logic if needed
 	log.Printf("Order confirmation email sent to %v", req.GetEmail())
 
-	return &pb.Empty{}, nil
+	return &pb.Empty{}, ctx, nil
 }

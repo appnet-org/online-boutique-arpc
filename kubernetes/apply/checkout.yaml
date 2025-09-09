@@ -9,10 +9,12 @@ metadata:
     app: checkout
     service: checkout
 spec:
+  clusterIP: None
   ports:
   - port: 8087
     targetPort: 8087
-    name: grpc
+    name: arpc-checkout
+    protocol: UDP
   selector:
     app: checkout
 ---
@@ -42,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-checkout
       containers:
       - name: checkout
-        image: appnetorg/onlineboutique-grpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["checkout"]
         imagePullPolicy: Always

@@ -6,11 +6,12 @@ import (
 	"log"
 	"math"
 	"math/rand"
-	"net"
+	"strconv"
 
-	"google.golang.org/grpc"
+	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/serializer"
 
-	pb "github.com/appnetorg/online-boutique-arpc/protos/onlineboutique"
+	pb "github.com/appnetorg/online-boutique-arpc/proto"
 )
 
 // NewShippingService returns a new server for the ShippingService
@@ -25,24 +26,24 @@ func NewShippingService(port int) *ShippingService {
 type ShippingService struct {
 	name string
 	port int
-	pb.ShippingServiceServer
 }
 
 // Run starts the server
 func (s *ShippingService) Run() error {
-	srv := grpc.NewServer()
-	pb.RegisterShippingServiceServer(srv, s)
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	serializer := &serializer.SymphonySerializer{}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
+
+	pb.RegisterShippingServiceServer(server, s)
 	log.Printf("ShippingService running at port: %d", s.port)
-	return srv.Serve(lis)
+	server.Start()
+	return nil
 }
 
 // GetQuote calculates a shipping quote for a given address and items
-func (s *ShippingService) GetQuote(ctx context.Context, req *pb.GetQuoteRequest) (*pb.GetQuoteResponse, error) {
+func (s *ShippingService) GetQuote(ctx context.Context, req *pb.GetQuoteRequest) (*pb.GetQuoteResponse, context.Context, error) {
 	log.Printf("GetQuote request received for address: %v, %v, %v, %v, %v",
 		req.GetAddress().GetStreetAddress(),
 		req.GetAddress().GetCity(),
@@ -63,11 +64,11 @@ func (s *ShippingService) GetQuote(ctx context.Context, req *pb.GetQuoteRequest)
 		},
 	}
 
-	return response, nil
+	return response, ctx, nil
 }
 
 // ShipOrder processes a shipping order and returns a tracking ID
-func (s *ShippingService) ShipOrder(ctx context.Context, req *pb.ShipOrderRequest) (*pb.ShipOrderResponse, error) {
+func (s *ShippingService) ShipOrder(ctx context.Context, req *pb.ShipOrderRequest) (*pb.ShipOrderResponse, context.Context, error) {
 	log.Printf("ShipOrder request received for address: %v, %v, %v, %v, %v",
 		req.GetAddress().GetStreetAddress(),
 		req.GetAddress().GetCity(),
@@ -87,7 +88,7 @@ func (s *ShippingService) ShipOrder(ctx context.Context, req *pb.ShipOrderReques
 
 	log.Printf("Order shipped with tracking ID: %v", trackingID)
 
-	return response, nil
+	return response, ctx, nil
 }
 
 // Quote represents a currency value.

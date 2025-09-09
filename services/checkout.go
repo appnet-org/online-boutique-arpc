@@ -4,14 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"os"
+	"strconv"
 
-	"google.golang.org/grpc"
+	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/appnetorg/online-boutique-arpc/protos/onlineboutique"
+	"github.com/appnet-org/arpc/pkg/serializer"
+	pb "github.com/appnetorg/online-boutique-arpc/proto"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
@@ -43,31 +46,28 @@ func NewCheckoutService(port int) *CheckoutService {
 // CheckoutService implements the CheckoutService
 type CheckoutService struct {
 	port int
-	pb.CheckoutServiceServer
 
 	productCatalogSvcAddr string
-	productCatalogSvcConn *grpc.ClientConn
+	productCatalogClient  pb.ProductCatalogServiceClient
 
 	cartSvcAddr string
-	cartSvcConn *grpc.ClientConn
+	cartClient  pb.CartServiceClient
 
 	currencySvcAddr string
-	currencySvcConn *grpc.ClientConn
+	currencyClient  pb.CurrencyServiceClient
 
 	shippingSvcAddr string
-	shippingSvcConn *grpc.ClientConn
+	shippingClient  pb.ShippingServiceClient
 
 	emailSvcAddr string
-	emailSvcConn *grpc.ClientConn
+	emailClient  pb.EmailServiceClient
 
 	paymentSvcAddr string
-	paymentSvcConn *grpc.ClientConn
+	paymentClient  pb.PaymentServiceClient
 }
 
 // Run starts the server
 func (cs *CheckoutService) Run() error {
-	ctx := context.Background()
-
 	mustMapEnv(&cs.shippingSvcAddr, "SHIPPING_SERVICE_ADDR")
 	mustMapEnv(&cs.productCatalogSvcAddr, "PRODUCT_CATALOG_SERVICE_ADDR")
 	mustMapEnv(&cs.cartSvcAddr, "CART_SERVICE_ADDR")
@@ -75,36 +75,75 @@ func (cs *CheckoutService) Run() error {
 	mustMapEnv(&cs.emailSvcAddr, "EMAIL_SERVICE_ADDR")
 	mustMapEnv(&cs.paymentSvcAddr, "PAYMENT_SERVICE_ADDR")
 
-	mustConnGRPC(ctx, &cs.shippingSvcConn, cs.shippingSvcAddr)
-	mustConnGRPC(ctx, &cs.productCatalogSvcConn, cs.productCatalogSvcAddr)
-	mustConnGRPC(ctx, &cs.cartSvcConn, cs.cartSvcAddr)
-	mustConnGRPC(ctx, &cs.currencySvcConn, cs.currencySvcAddr)
-	mustConnGRPC(ctx, &cs.emailSvcConn, cs.emailSvcAddr)
-	mustConnGRPC(ctx, &cs.paymentSvcConn, cs.paymentSvcAddr)
+	// Create ARPC clients
+	serializer := &serializer.SymphonySerializer{}
 
-	srv := grpc.NewServer()
-	pb.RegisterCheckoutServiceServer(srv, cs)
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cs.port))
+	// Shipping client
+	shippingClient, err := rpc.NewClient(serializer, cs.shippingSvcAddr, []element.RPCElement{})
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Failed to create shipping aRPC client: %v", err)
 	}
+	cs.shippingClient = pb.NewShippingServiceClient(shippingClient)
+
+	// Product catalog client
+	productCatalogClient, err := rpc.NewClient(serializer, cs.productCatalogSvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create product catalog aRPC client: %v", err)
+	}
+	cs.productCatalogClient = pb.NewProductCatalogServiceClient(productCatalogClient)
+
+	// Cart client
+	cartClient, err := rpc.NewClient(serializer, cs.cartSvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create cart aRPC client: %v", err)
+	}
+	cs.cartClient = pb.NewCartServiceClient(cartClient)
+
+	// Currency client
+	currencyClient, err := rpc.NewClient(serializer, cs.currencySvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create currency aRPC client: %v", err)
+	}
+	cs.currencyClient = pb.NewCurrencyServiceClient(currencyClient)
+
+	// Email client
+	emailClient, err := rpc.NewClient(serializer, cs.emailSvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create email aRPC client: %v", err)
+	}
+	cs.emailClient = pb.NewEmailServiceClient(emailClient)
+
+	// Payment client
+	paymentClient, err := rpc.NewClient(serializer, cs.paymentSvcAddr, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to create payment aRPC client: %v", err)
+	}
+	cs.paymentClient = pb.NewPaymentServiceClient(paymentClient)
+
+	// Create ARPC server
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(cs.port), serializer, []element.RPCElement{})
+	if err != nil {
+		log.Fatalf("Failed to start aRPC server: %v", err)
+	}
+
+	pb.RegisterCheckoutServiceServer(server, cs)
 	log.Printf("CheckoutService running at port: %d", cs.port)
-	return srv.Serve(lis)
+	server.Start()
+	return nil
 }
 
 // PlaceOrder processes an order placement request
-func (cs *CheckoutService) PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (*pb.PlaceOrderResponse, error) {
+func (cs *CheckoutService) PlaceOrder(ctx context.Context, req *pb.PlaceOrderRequest) (*pb.PlaceOrderResponse, context.Context, error) {
 	log.Printf("[PlaceOrder] user_id=%q user_currency=%q", req.UserId, req.UserCurrency)
 
 	orderID, err := uuid.NewUUID()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to generate order uuid")
+		return nil, ctx, status.Errorf(codes.Internal, "failed to generate order uuid")
 	}
 
 	prep, err := cs.prepareOrderItemsAndShippingQuoteFromCart(ctx, req.UserId, req.UserCurrency, req.Address)
 	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, ctx, status.Error(codes.Internal, err.Error())
 	}
 
 	total := pb.Money{CurrencyCode: req.UserCurrency,
@@ -118,13 +157,13 @@ func (cs *CheckoutService) PlaceOrder(ctx context.Context, req *pb.PlaceOrderReq
 
 	txID, err := cs.chargeCard(ctx, &total, req.CreditCard)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to charge card: %+v", err)
+		return nil, ctx, status.Errorf(codes.Internal, "failed to charge card: %+v", err)
 	}
 	log.Printf("payment went through (transaction_id: %s)", txID)
 
 	shippingTrackingID, err := cs.shipOrder(ctx, req.Address, prep.cartItems)
 	if err != nil {
-		return nil, status.Errorf(codes.Unavailable, "shipping error: %+v", err)
+		return nil, ctx, status.Errorf(codes.Unavailable, "shipping error: %+v", err)
 	}
 
 	_ = cs.emptyUserCart(ctx, req.UserId)
@@ -143,7 +182,7 @@ func (cs *CheckoutService) PlaceOrder(ctx context.Context, req *pb.PlaceOrderReq
 		log.Printf("order confirmation email sent to %q", req.Email)
 	}
 	resp := &pb.PlaceOrderResponse{Order: orderResult}
-	return resp, nil
+	return resp, ctx, nil
 }
 
 type orderPrep struct {
@@ -196,10 +235,9 @@ func (cs *CheckoutService) prepareOrderItemsAndShippingQuoteFromCart(ctx context
 }
 
 func (cs *CheckoutService) quoteShipping(ctx context.Context, address *pb.Address, items []*pb.CartItem) (*pb.Money, error) {
-	shippingQuote, err := pb.NewShippingServiceClient(cs.shippingSvcConn).
-		GetQuote(ctx, &pb.GetQuoteRequest{
-			Address: address,
-			Items:   items})
+	shippingQuote, err := cs.shippingClient.GetQuote(ctx, &pb.GetQuoteRequest{
+		Address: address,
+		Items:   items})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get shipping quote: %+v", err)
 	}
@@ -207,7 +245,7 @@ func (cs *CheckoutService) quoteShipping(ctx context.Context, address *pb.Addres
 }
 
 func (cs *CheckoutService) getUserCart(ctx context.Context, userID string) ([]*pb.CartItem, error) {
-	cart, err := pb.NewCartServiceClient(cs.cartSvcConn).GetCart(ctx, &pb.GetCartRequest{UserId: userID})
+	cart, err := cs.cartClient.GetCart(ctx, &pb.GetCartRequest{UserId: userID})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user cart during checkout: %+v", err)
 	}
@@ -215,7 +253,7 @@ func (cs *CheckoutService) getUserCart(ctx context.Context, userID string) ([]*p
 }
 
 func (cs *CheckoutService) emptyUserCart(ctx context.Context, userID string) error {
-	if _, err := pb.NewCartServiceClient(cs.cartSvcConn).EmptyCart(ctx, &pb.EmptyCartRequest{UserId: userID}); err != nil {
+	if _, err := cs.cartClient.EmptyCart(ctx, &pb.EmptyCartRequest{UserId: userID}); err != nil {
 		return fmt.Errorf("failed to empty user cart during checkout: %+v", err)
 	}
 	return nil
@@ -223,7 +261,7 @@ func (cs *CheckoutService) emptyUserCart(ctx context.Context, userID string) err
 
 func (cs *CheckoutService) prepOrderItems(ctx context.Context, items []*pb.CartItem, userCurrency string) ([]*pb.OrderItem, error) {
 	out := make([]*pb.OrderItem, len(items))
-	cl := pb.NewProductCatalogServiceClient(cs.productCatalogSvcConn)
+	cl := cs.productCatalogClient
 
 	for i, item := range items {
 		product, err := cl.GetProduct(ctx, &pb.GetProductRequest{Id: item.GetProductId()})
@@ -242,7 +280,7 @@ func (cs *CheckoutService) prepOrderItems(ctx context.Context, items []*pb.CartI
 }
 
 func (cs *CheckoutService) convertCurrency(from *pb.Money, toCurrency string) (*pb.Money, error) {
-	result, err := pb.NewCurrencyServiceClient(cs.currencySvcConn).Convert(context.TODO(), &pb.CurrencyConversionRequest{
+	result, err := cs.currencyClient.Convert(context.TODO(), &pb.CurrencyConversionRequest{
 		From:   from,
 		ToCode: toCurrency})
 	if err != nil {
@@ -252,7 +290,7 @@ func (cs *CheckoutService) convertCurrency(from *pb.Money, toCurrency string) (*
 }
 
 func (cs *CheckoutService) chargeCard(ctx context.Context, amount *pb.Money, paymentInfo *pb.CreditCardInfo) (string, error) {
-	paymentResp, err := pb.NewPaymentServiceClient(cs.paymentSvcConn).Charge(ctx, &pb.ChargeRequest{
+	paymentResp, err := cs.paymentClient.Charge(ctx, &pb.ChargeRequest{
 		Amount:     amount,
 		CreditCard: paymentInfo})
 	if err != nil {
@@ -262,14 +300,14 @@ func (cs *CheckoutService) chargeCard(ctx context.Context, amount *pb.Money, pay
 }
 
 func (cs *CheckoutService) sendOrderConfirmation(ctx context.Context, email string, order *pb.OrderResult) error {
-	_, err := pb.NewEmailServiceClient(cs.emailSvcConn).SendOrderConfirmation(ctx, &pb.SendOrderConfirmationRequest{
+	_, err := cs.emailClient.SendOrderConfirmation(ctx, &pb.SendOrderConfirmationRequest{
 		Email: email,
 		Order: order})
 	return err
 }
 
 func (cs *CheckoutService) shipOrder(ctx context.Context, address *pb.Address, items []*pb.CartItem) (string, error) {
-	resp, err := pb.NewShippingServiceClient(cs.shippingSvcConn).ShipOrder(ctx, &pb.ShipOrderRequest{
+	resp, err := cs.shippingClient.ShipOrder(ctx, &pb.ShipOrderRequest{
 		Address: address,
 		Items:   items})
 	if err != nil {

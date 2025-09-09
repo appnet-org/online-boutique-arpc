@@ -9,10 +9,12 @@ metadata:
     app: email
     service: email
 spec:
+  clusterIP: None
   ports:
   - port: 8086
     targetPort: 8086
-    name: grpc
+    name: arpc-email
+    protocol: UDP
   selector:
     app: email
 ---
@@ -42,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-email
       containers:
       - name: email
-        image: appnetorg/onlineboutique-grpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["email"]
         imagePullPolicy: Always

@@ -9,10 +9,12 @@ metadata:
     app: shipping
     service: shipping
 spec:
+  clusterIP: None
   ports:
   - port: 8085
     targetPort: 8085
-    name: grpc
+    name: arpc-shipping
+    protocol: UDP
   selector:
     app: shipping
 ---
@@ -42,12 +44,12 @@ spec:
       serviceAccountName: onlineboutique-shipping
       containers:
       - name: shipping
-        image: appnetorg/onlineboutique-grpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["shipping"]
         imagePullPolicy: Always
         ports:
-        - containerPort: 8088
+        - containerPort: 8085
 ---
 # volume and persistent volume claim of `shipping`
 apiVersion: v1

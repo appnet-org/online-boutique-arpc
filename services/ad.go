@@ -2,14 +2,14 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math/rand"
-	"net"
+	"strconv"
 
-	"google.golang.org/grpc"
+	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/serializer"
 
-	pb "github.com/appnetorg/online-boutique-arpc/protos/onlineboutique"
+	pb "github.com/appnetorg/online-boutique-arpc/proto"
 )
 
 const (
@@ -28,25 +28,24 @@ func NewAdService(port int) *AdService {
 type AdService struct {
 	port int
 	ads  map[string]*pb.Ad
-	pb.AdServiceServer
 }
 
 // Run starts the server
 func (s *AdService) Run() error {
-	opts := []grpc.ServerOption{}
-	srv := grpc.NewServer(opts...)
-	pb.RegisterAdServiceServer(srv, s)
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	serializer := &serializer.SymphonySerializer{}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
+
+	pb.RegisterAdServiceServer(server, s)
 	log.Printf("AdService running at port: %d", s.port)
-	return srv.Serve(lis)
+	server.Start()
+	return nil
 }
 
 // GetAds returns a list of ads based on the context keys
-func (s *AdService) GetAds(ctx context.Context, req *pb.AdRequest) (*pb.AdResponse, error) {
+func (s *AdService) GetAds(ctx context.Context, req *pb.AdRequest) (*pb.AdResponse, context.Context, error) {
 	log.Printf("GetAds request with context_keys = %v", req.GetContextKeys())
 
 	var allAds []*pb.Ad
@@ -66,7 +65,7 @@ func (s *AdService) GetAds(ctx context.Context, req *pb.AdRequest) (*pb.AdRespon
 
 	return &pb.AdResponse{
 		Ads: allAds,
-	}, nil
+	}, ctx, nil
 }
 
 func (s *AdService) getAdsByCategory(category string) []*pb.Ad {

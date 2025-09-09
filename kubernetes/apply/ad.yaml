@@ -9,10 +9,12 @@ metadata:
     app: ad
     service: ad
 spec:
+  clusterIP: None
   ports:
   - port: 8089
     targetPort: 8089
-    name: grpc
+    name: arpc-ad
+    protocol: UDP
   selector:
     app: ad
 ---
@@ -42,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-ad
       containers:
       - name: ad
-        image: appnetorg/onlineboutique-grpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["ad"]
         imagePullPolicy: Always

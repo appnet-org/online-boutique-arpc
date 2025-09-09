@@ -9,10 +9,12 @@ metadata:
     app: recommendation
     service: recommendation
 spec:
+  clusterIP: None
   ports:
   - port: 8088
     targetPort: 8088
-    name: grpc
+    name: arpc-recommendation
+    protocol: UDP
   selector:
     app: recommendation
 ---
@@ -42,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-recommendation
       containers:
       - name: recommendation
-        image: appnetorg/onlineboutique-grpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["recommendation"]
         imagePullPolicy: Always

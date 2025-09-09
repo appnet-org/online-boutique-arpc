@@ -9,10 +9,12 @@ metadata:
     app: payment
     service: payment
 spec:
+  clusterIP: None
   ports:
   - port: 8084
     targetPort: 8084
-    name: grpc
+    name: arpc-payment
+    protocol: UDP
   selector:
     app: payment
 ---
@@ -42,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-payment
       containers:
       - name: payment
-        image: appnetorg/onlineboutique-grpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["payment"]
         imagePullPolicy: Always
