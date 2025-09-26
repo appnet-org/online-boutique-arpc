@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-ad
       containers:
       - name: ad
-        image: appnetorg/onlineboutique-arpc:latest
+        image: deskchen/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["ad"]
         imagePullPolicy: Always

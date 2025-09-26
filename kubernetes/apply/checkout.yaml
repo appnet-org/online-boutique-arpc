@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-checkout
       containers:
       - name: checkout
-        image: appnetorg/onlineboutique-arpc:latest
+        image: deskchen/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["checkout"]
         imagePullPolicy: Always
