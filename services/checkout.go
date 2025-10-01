@@ -37,9 +37,10 @@ func init() {
 }
 
 // NewCheckoutService returns a new server for the CheckoutService
-func NewCheckoutService(port int) *CheckoutService {
+func NewCheckoutService(port int, tracingElement element.RPCElement) *CheckoutService {
 	return &CheckoutService{
-		port: port,
+		port:           port,
+		tracingElement: tracingElement,
 	}
 }
 
@@ -64,6 +65,8 @@ type CheckoutService struct {
 
 	paymentSvcAddr string
 	paymentClient  pb.PaymentServiceClient
+
+	tracingElement element.RPCElement
 }
 
 // Run starts the server
@@ -77,51 +80,52 @@ func (cs *CheckoutService) Run() error {
 
 	// Create ARPC clients
 	serializer := &serializer.SymphonySerializer{}
+	rpcElements := []element.RPCElement{cs.tracingElement}
 
 	// Shipping client
-	shippingClient, err := rpc.NewClient(serializer, cs.shippingSvcAddr, []element.RPCElement{})
+	shippingClient, err := rpc.NewClient(serializer, cs.shippingSvcAddr, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to create shipping aRPC client: %v", err)
 	}
 	cs.shippingClient = pb.NewShippingServiceClient(shippingClient)
 
 	// Product catalog client
-	productCatalogClient, err := rpc.NewClient(serializer, cs.productCatalogSvcAddr, []element.RPCElement{})
+	productCatalogClient, err := rpc.NewClient(serializer, cs.productCatalogSvcAddr, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to create product catalog aRPC client: %v", err)
 	}
 	cs.productCatalogClient = pb.NewProductCatalogServiceClient(productCatalogClient)
 
 	// Cart client
-	cartClient, err := rpc.NewClient(serializer, cs.cartSvcAddr, []element.RPCElement{})
+	cartClient, err := rpc.NewClient(serializer, cs.cartSvcAddr, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to create cart aRPC client: %v", err)
 	}
 	cs.cartClient = pb.NewCartServiceClient(cartClient)
 
 	// Currency client
-	currencyClient, err := rpc.NewClient(serializer, cs.currencySvcAddr, []element.RPCElement{})
+	currencyClient, err := rpc.NewClient(serializer, cs.currencySvcAddr, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to create currency aRPC client: %v", err)
 	}
 	cs.currencyClient = pb.NewCurrencyServiceClient(currencyClient)
 
 	// Email client
-	emailClient, err := rpc.NewClient(serializer, cs.emailSvcAddr, []element.RPCElement{})
+	emailClient, err := rpc.NewClient(serializer, cs.emailSvcAddr, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to create email aRPC client: %v", err)
 	}
 	cs.emailClient = pb.NewEmailServiceClient(emailClient)
 
 	// Payment client
-	paymentClient, err := rpc.NewClient(serializer, cs.paymentSvcAddr, []element.RPCElement{})
+	paymentClient, err := rpc.NewClient(serializer, cs.paymentSvcAddr, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to create payment aRPC client: %v", err)
 	}
 	cs.paymentClient = pb.NewPaymentServiceClient(paymentClient)
 
 	// Create ARPC server
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(cs.port), serializer, []element.RPCElement{})
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(cs.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

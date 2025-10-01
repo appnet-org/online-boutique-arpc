@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 	"github.com/redis/go-redis/v9"
 
@@ -14,9 +15,10 @@ import (
 )
 
 // NewCartService returns a new server for the CartService
-func NewCartService(port int) *CartService {
+func NewCartService(port int, tracingElement element.RPCElement) *CartService {
 	return &CartService{
-		port: port,
+		port:           port,
+		tracingElement: tracingElement,
 	}
 }
 
@@ -26,6 +28,8 @@ type CartService struct {
 
 	cartRedisAddr string
 	rdb           *redis.Client // Redis client
+
+	tracingElement element.RPCElement
 }
 
 // Run starts the server
@@ -38,7 +42,8 @@ func (s *CartService) Run() error {
 	})
 
 	serializer := &serializer.SymphonySerializer{}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
+	rpcElements := []element.RPCElement{s.tracingElement}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

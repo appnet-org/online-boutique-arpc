@@ -14,9 +14,10 @@ import (
 )
 
 // NewRecommendationService returns a new server for the RecommendationService
-func NewRecommendationService(port int) *RecommendationService {
+func NewRecommendationService(port int, tracingElement element.RPCElement) *RecommendationService {
 	return &RecommendationService{
-		port: port,
+		port:           port,
+		tracingElement: tracingElement,
 	}
 }
 
@@ -26,6 +27,8 @@ type RecommendationService struct {
 
 	productCatalogSvcAddr string
 	productCatalogClient  pb.ProductCatalogServiceClient
+
+	tracingElement element.RPCElement
 }
 
 // Run starts the server
@@ -34,14 +37,15 @@ func (s *RecommendationService) Run() error {
 
 	// Create ARPC client
 	serializer := &serializer.SymphonySerializer{}
-	productCatalogClient, err := rpc.NewClient(serializer, s.productCatalogSvcAddr, []element.RPCElement{})
+	rpcElements := []element.RPCElement{s.tracingElement}
+	productCatalogClient, err := rpc.NewClient(serializer, s.productCatalogSvcAddr, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to create product catalog aRPC client: %v", err)
 	}
 	s.productCatalogClient = pb.NewProductCatalogServiceClient(productCatalogClient)
 
 	// Create ARPC server
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, []element.RPCElement{})
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

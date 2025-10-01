@@ -31,6 +31,7 @@ COPY --from=builder /app/onlineboutique .
 COPY services/templates /app/templates
 COPY services/static /app/static
 COPY services/data /app/data
+COPY services/tracing /app/tracing
 
 RUN chmod +x /app/onlineboutique
 

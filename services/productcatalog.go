@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -28,12 +29,15 @@ type ProductCatalogService struct {
 	mu            sync.RWMutex
 	extraLatency  time.Duration
 	reloadCatalog bool
+
+	tracingElement element.RPCElement
 }
 
 // NewProductCatalogService creates a new ProductCatalogService
-func NewProductCatalogService(port int) *ProductCatalogService {
+func NewProductCatalogService(port int, tracingElement element.RPCElement) *ProductCatalogService {
 	svc := &ProductCatalogService{
-		port: port,
+		port:           port,
+		tracingElement: tracingElement,
 	}
 
 	// Initialize extra latency from environment variable
@@ -49,12 +53,13 @@ func NewProductCatalogService(port int) *ProductCatalogService {
 	go func() {
 		for {
 			sig := <-sigs
-			if sig == syscall.SIGUSR1 {
+			switch sig {
+			case syscall.SIGUSR1:
 				log.Println("Enabling catalog reload")
 				svc.mu.Lock()
 				svc.reloadCatalog = true
 				svc.mu.Unlock()
-			} else if sig == syscall.SIGUSR2 {
+			case syscall.SIGUSR2:
 				log.Println("Disabling catalog reload")
 				svc.mu.Lock()
 				svc.reloadCatalog = false
@@ -105,7 +110,8 @@ func (s *ProductCatalogService) parseCatalog() []*pb.Product {
 // Run starts the ARPC server
 func (s *ProductCatalogService) Run() error {
 	serializer := &serializer.SymphonySerializer{}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
+	rpcElements := []element.RPCElement{s.tracingElement}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

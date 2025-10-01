@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
@@ -23,21 +24,25 @@ var (
 )
 
 // NewEmailService returns a new server for the EmailService
-func NewEmailService(port int) *EmailService {
+func NewEmailService(port int, tracingElement element.RPCElement) *EmailService {
 	return &EmailService{
-		port: port,
+		port:           port,
+		tracingElement: tracingElement,
 	}
 }
 
 // EmailService implements the EmailService
 type EmailService struct {
 	port int
+
+	tracingElement element.RPCElement
 }
 
 // Run starts the server
 func (s *EmailService) Run() error {
+	rpcElements := []element.RPCElement{s.tracingElement}
 	serializer := &serializer.SymphonySerializer{}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

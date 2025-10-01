@@ -6,6 +6,7 @@ import (
 	"os"
 
 	services "github.com/appnetorg/online-boutique-arpc/services"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 type server interface {
@@ -32,27 +33,34 @@ func main() {
 	var cmd = os.Args[1]
 	println("cmd parsed: ", cmd)
 
+	tracingElement, err := tracing.NewTracingElement(cmd)
+	if err != nil {
+		log.Fatalf("ERROR: cannot init Jaeger: %v\n", err)
+	}
+	defer tracingElement.(*tracing.TracingElement).Close()
+	log.Printf("Jaeger Tracer Initialised for %s", cmd)
+
 	switch cmd {
 	case "cart":
-		srv = services.NewCartService(*cartport)
+		srv = services.NewCartService(*cartport, tracingElement)
 	case "productcatalog":
-		srv = services.NewProductCatalogService(*productcatalogport)
+		srv = services.NewProductCatalogService(*productcatalogport, tracingElement)
 	case "currency":
-		srv = services.NewCurrencyService(*currencyport)
+		srv = services.NewCurrencyService(*currencyport, tracingElement)
 	case "payment":
-		srv = services.NewPaymentService(*paymentport)
+		srv = services.NewPaymentService(*paymentport, tracingElement)
 	case "shipping":
-		srv = services.NewShippingService(*shippingport)
+		srv = services.NewShippingService(*shippingport, tracingElement)
 	case "email":
-		srv = services.NewEmailService(*emailport)
+		srv = services.NewEmailService(*emailport, tracingElement)
 	case "checkout":
-		srv = services.NewCheckoutService(*checkoutport)
+		srv = services.NewCheckoutService(*checkoutport, tracingElement)
 	case "recommendation":
-		srv = services.NewRecommendationService(*recommendationport)
+		srv = services.NewRecommendationService(*recommendationport, tracingElement)
 	case "ad":
-		srv = services.NewAdService(*adport)
+		srv = services.NewAdService(*adport, tracingElement)
 	case "frontend":
-		srv = services.NewFrontendServer(*frontendport)
+		srv = services.NewFrontendServer(*frontendport, tracingElement)
 	default:
 		log.Fatalf("unknown cmd: %s", cmd)
 	}

@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
@@ -17,10 +18,11 @@ const (
 )
 
 // NewAdService returns a new server for the AdService
-func NewAdService(port int) *AdService {
+func NewAdService(port int, tracingElement element.RPCElement) *AdService {
 	return &AdService{
-		port: port,
-		ads:  createAdsMap(),
+		port:           port,
+		ads:            createAdsMap(),
+		tracingElement: tracingElement,
 	}
 }
 
@@ -28,12 +30,15 @@ func NewAdService(port int) *AdService {
 type AdService struct {
 	port int
 	ads  map[string]*pb.Ad
+
+	tracingElement element.RPCElement
 }
 
 // Run starts the server
 func (s *AdService) Run() error {
+	rpcElements := []element.RPCElement{s.tracingElement}
 	serializer := &serializer.SymphonySerializer{}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 	"github.com/google/uuid"
 
@@ -70,21 +71,25 @@ func validateAndCharge(amount *pb.Money, card *pb.CreditCardInfo) (string, error
 }
 
 // NewPaymentService returns a new server for the PaymentService
-func NewPaymentService(port int) *PaymentService {
+func NewPaymentService(port int, tracingElement element.RPCElement) *PaymentService {
 	return &PaymentService{
-		port: port,
+		port:           port,
+		tracingElement: tracingElement,
 	}
 }
 
 // PaymentService implements the PaymentService
 type PaymentService struct {
 	port int
+
+	tracingElement element.RPCElement
 }
 
 // Run starts the server
 func (s *PaymentService) Run() error {
 	serializer := &serializer.SymphonySerializer{}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
+	rpcElements := []element.RPCElement{s.tracingElement}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

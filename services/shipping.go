@@ -9,16 +9,18 @@ import (
 	"strconv"
 
 	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
 )
 
 // NewShippingService returns a new server for the ShippingService
-func NewShippingService(port int) *ShippingService {
+func NewShippingService(port int, tracingElement element.RPCElement) *ShippingService {
 	return &ShippingService{
-		name: "shipping-service",
-		port: port,
+		name:           "shipping-service",
+		port:           port,
+		tracingElement: tracingElement,
 	}
 }
 
@@ -26,12 +28,15 @@ func NewShippingService(port int) *ShippingService {
 type ShippingService struct {
 	name string
 	port int
+
+	tracingElement element.RPCElement
 }
 
 // Run starts the server
 func (s *ShippingService) Run() error {
 	serializer := &serializer.SymphonySerializer{}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
+	rpcElements := []element.RPCElement{s.tracingElement}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
@@ -98,7 +103,7 @@ type quote struct {
 }
 
 // createQuoteFromCount generates a shipping quote based on item count.
-func createQuoteFromCount(count int) quote {
+func createQuoteFromCount(_ int) quote {
 	return createQuoteFromFloat(8.99) // Example static rate
 }
 
