@@ -12,6 +12,7 @@ import (
 	"github.com/appnet-org/arpc/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 // Embed the HTML template for the email
@@ -24,23 +25,20 @@ var (
 )
 
 // NewEmailService returns a new server for the EmailService
-func NewEmailService(port int, tracingElement element.RPCElement) *EmailService {
+func NewEmailService(port int) *EmailService {
 	return &EmailService{
-		port:           port,
-		tracingElement: tracingElement,
+		port: port,
 	}
 }
 
 // EmailService implements the EmailService
 type EmailService struct {
 	port int
-
-	tracingElement element.RPCElement
 }
 
 // Run starts the server
 func (s *EmailService) Run() error {
-	rpcElements := []element.RPCElement{s.tracingElement}
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	serializer := &serializer.SymphonySerializer{}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {

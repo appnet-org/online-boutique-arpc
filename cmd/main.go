@@ -7,6 +7,7 @@ import (
 
 	services "github.com/appnetorg/online-boutique-arpc/services"
 	"github.com/appnetorg/online-boutique-arpc/services/tracing"
+	"github.com/opentracing/opentracing-go"
 )
 
 type server interface {
@@ -33,34 +34,35 @@ func main() {
 	var cmd = os.Args[1]
 	println("cmd parsed: ", cmd)
 
-	tracingElement, err := tracing.NewTracingElement(cmd)
+	tracer, closer, err := tracing.Init(cmd)
 	if err != nil {
 		log.Fatalf("ERROR: cannot init Jaeger: %v\n", err)
 	}
-	defer tracingElement.(*tracing.TracingElement).Close()
+	defer closer.Close()
+	opentracing.SetGlobalTracer(tracer)
 	log.Printf("Jaeger Tracer Initialised for %s", cmd)
 
 	switch cmd {
 	case "cart":
-		srv = services.NewCartService(*cartport, tracingElement)
+		srv = services.NewCartService(*cartport)
 	case "productcatalog":
-		srv = services.NewProductCatalogService(*productcatalogport, tracingElement)
+		srv = services.NewProductCatalogService(*productcatalogport)
 	case "currency":
-		srv = services.NewCurrencyService(*currencyport, tracingElement)
+		srv = services.NewCurrencyService(*currencyport)
 	case "payment":
-		srv = services.NewPaymentService(*paymentport, tracingElement)
+		srv = services.NewPaymentService(*paymentport)
 	case "shipping":
-		srv = services.NewShippingService(*shippingport, tracingElement)
+		srv = services.NewShippingService(*shippingport)
 	case "email":
-		srv = services.NewEmailService(*emailport, tracingElement)
+		srv = services.NewEmailService(*emailport)
 	case "checkout":
-		srv = services.NewCheckoutService(*checkoutport, tracingElement)
+		srv = services.NewCheckoutService(*checkoutport)
 	case "recommendation":
-		srv = services.NewRecommendationService(*recommendationport, tracingElement)
+		srv = services.NewRecommendationService(*recommendationport)
 	case "ad":
-		srv = services.NewAdService(*adport, tracingElement)
+		srv = services.NewAdService(*adport)
 	case "frontend":
-		srv = services.NewFrontendServer(*frontendport, tracingElement)
+		srv = services.NewFrontendServer(*frontendport)
 	default:
 		log.Fatalf("unknown cmd: %s", cmd)
 	}

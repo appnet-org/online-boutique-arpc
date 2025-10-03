@@ -13,14 +13,14 @@ import (
 	"github.com/appnet-org/arpc/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 // NewShippingService returns a new server for the ShippingService
-func NewShippingService(port int, tracingElement element.RPCElement) *ShippingService {
+func NewShippingService(port int) *ShippingService {
 	return &ShippingService{
-		name:           "shipping-service",
-		port:           port,
-		tracingElement: tracingElement,
+		name: "shipping-service",
+		port: port,
 	}
 }
 
@@ -28,14 +28,12 @@ func NewShippingService(port int, tracingElement element.RPCElement) *ShippingSe
 type ShippingService struct {
 	name string
 	port int
-
-	tracingElement element.RPCElement
 }
 
 // Run starts the server
 func (s *ShippingService) Run() error {
 	serializer := &serializer.SymphonySerializer{}
-	rpcElements := []element.RPCElement{s.tracingElement}
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)

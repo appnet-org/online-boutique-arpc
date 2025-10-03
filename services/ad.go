@@ -11,6 +11,7 @@ import (
 	"github.com/appnet-org/arpc/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 const (
@@ -18,11 +19,10 @@ const (
 )
 
 // NewAdService returns a new server for the AdService
-func NewAdService(port int, tracingElement element.RPCElement) *AdService {
+func NewAdService(port int) *AdService {
 	return &AdService{
-		port:           port,
-		ads:            createAdsMap(),
-		tracingElement: tracingElement,
+		port: port,
+		ads:  createAdsMap(),
 	}
 }
 
@@ -30,13 +30,11 @@ func NewAdService(port int, tracingElement element.RPCElement) *AdService {
 type AdService struct {
 	port int
 	ads  map[string]*pb.Ad
-
-	tracingElement element.RPCElement
 }
 
 // Run starts the server
 func (s *AdService) Run() error {
-	rpcElements := []element.RPCElement{s.tracingElement}
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	serializer := &serializer.SymphonySerializer{}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {

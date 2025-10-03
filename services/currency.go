@@ -14,6 +14,7 @@ import (
 	"github.com/appnet-org/arpc/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 const (
@@ -24,12 +25,10 @@ const (
 type CurrencyService struct {
 	port          int
 	conversionMap map[string]float64
-
-	tracingElement element.RPCElement
 }
 
 // NewCurrencyService returns a new server for the CurrencyService
-func NewCurrencyService(port int, tracingElement element.RPCElement) *CurrencyService {
+func NewCurrencyService(port int) *CurrencyService {
 	// Read the file content into a []byte
 	currencyData, err := os.ReadFile(filePath)
 	if err != nil {
@@ -41,15 +40,14 @@ func NewCurrencyService(port int, tracingElement element.RPCElement) *CurrencySe
 		return nil
 	}
 	return &CurrencyService{
-		port:           port,
-		conversionMap:  conversionMap,
-		tracingElement: tracingElement,
+		port:          port,
+		conversionMap: conversionMap,
 	}
 }
 
 // Run starts the server
 func (s *CurrencyService) Run() error {
-	rpcElements := []element.RPCElement{s.tracingElement}
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	serializer := &serializer.SymphonySerializer{}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {

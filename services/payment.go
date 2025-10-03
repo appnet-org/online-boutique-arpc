@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 type InvalidCreditCardErr struct{}
@@ -71,24 +72,21 @@ func validateAndCharge(amount *pb.Money, card *pb.CreditCardInfo) (string, error
 }
 
 // NewPaymentService returns a new server for the PaymentService
-func NewPaymentService(port int, tracingElement element.RPCElement) *PaymentService {
+func NewPaymentService(port int) *PaymentService {
 	return &PaymentService{
-		port:           port,
-		tracingElement: tracingElement,
+		port: port,
 	}
 }
 
 // PaymentService implements the PaymentService
 type PaymentService struct {
 	port int
-
-	tracingElement element.RPCElement
 }
 
 // Run starts the server
 func (s *PaymentService) Run() error {
 	serializer := &serializer.SymphonySerializer{}
-	rpcElements := []element.RPCElement{s.tracingElement}
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)

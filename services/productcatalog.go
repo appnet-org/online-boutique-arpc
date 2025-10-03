@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 // ProductCatalogService implements the ProductCatalogService
@@ -29,15 +30,12 @@ type ProductCatalogService struct {
 	mu            sync.RWMutex
 	extraLatency  time.Duration
 	reloadCatalog bool
-
-	tracingElement element.RPCElement
 }
 
 // NewProductCatalogService creates a new ProductCatalogService
-func NewProductCatalogService(port int, tracingElement element.RPCElement) *ProductCatalogService {
+func NewProductCatalogService(port int) *ProductCatalogService {
 	svc := &ProductCatalogService{
-		port:           port,
-		tracingElement: tracingElement,
+		port: port,
 	}
 
 	// Initialize extra latency from environment variable
@@ -110,7 +108,7 @@ func (s *ProductCatalogService) parseCatalog() []*pb.Product {
 // Run starts the ARPC server
 func (s *ProductCatalogService) Run() error {
 	serializer := &serializer.SymphonySerializer{}
-	rpcElements := []element.RPCElement{s.tracingElement}
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
