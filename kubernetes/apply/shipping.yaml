@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-shipping
       containers:
       - name: shipping
-        image: deskchen/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["shipping"]
         imagePullPolicy: Always

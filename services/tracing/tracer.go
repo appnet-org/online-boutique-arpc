@@ -27,6 +27,42 @@ var (
 	defaultSampleRatio float64 = 1
 )
 
+// NewClientTracingElement creates a new client-side tracing element
+// Uses the global tracer, similar to gRPC's OpenTracingClientInterceptor
+func NewClientTracingElement() element.RPCElement {
+	return &ClientTracingElement{}
+}
+
+// NewServerTracingElement creates a new server-side tracing element
+// Uses the global tracer, similar to gRPC's OpenTracingServerInterceptor
+func NewServerTracingElement() element.RPCElement {
+	return &ServerTracingElement{}
+}
+
+// ClientTracingElement methods
+func (t *ClientTracingElement) Name() string {
+	return "client-tracing"
+}
+
+// implements OpenTracing TextMap carrier over arpc metadata
+type mdCarrier struct{ md metadata.Metadata }
+
+// writer
+func (c mdCarrier) Set(key, val string) { c.md.Set(key, val) }
+
+// reader
+func (c mdCarrier) ForeachKey(handler func(key, val string) error) error {
+	if c.md == nil {
+		return nil
+	}
+	for k, v := range c.md {
+		if err := handler(k, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Init initializes a Jaeger tracer and returns tracer and closer, exactly like gRPC's tracing.Init
 func Init(serviceName string) (opentracing.Tracer, io.Closer, error) {
 	ratio := defaultSampleRatio
@@ -51,53 +87,36 @@ func Init(serviceName string) (opentracing.Tracer, io.Closer, error) {
 	return tracer, closer, nil
 }
 
-// NewClientTracingElement creates a new client-side tracing element
-// Uses the global tracer, similar to gRPC's OpenTracingClientInterceptor
-func NewClientTracingElement() element.RPCElement {
-	return &ClientTracingElement{}
-}
-
-// NewServerTracingElement creates a new server-side tracing element
-// Uses the global tracer, similar to gRPC's OpenTracingServerInterceptor
-func NewServerTracingElement() element.RPCElement {
-	return &ServerTracingElement{}
-}
-
-// ClientTracingElement methods
-func (t *ClientTracingElement) Name() string {
-	return "client-tracing"
-}
-
-func (t *ClientTracingElement) ProcessRequest(ctx context.Context, req *element.RPCRequest) (*element.RPCRequest, error) {
-	// Create client-side span using global tracer
-	span, newCtx := opentracing.StartSpanFromContext(ctx,
+func (t *ClientTracingElement) ProcessRequest(ctx context.Context, req *element.RPCRequest) (*element.RPCRequest, context.Context, error) {
+	var parentCtx opentracing.SpanContext
+	if p := opentracing.SpanFromContext(ctx); p != nil {
+		parentCtx = p.Context()
+	}
+	span := opentracing.GlobalTracer().StartSpan(
 		fmt.Sprintf("%s.%s", req.ServiceName, req.Method),
+		opentracing.ChildOf(parentCtx),
 		ext.SpanKindRPCClient,
 	)
 
-	// Add client-side tags
+	// gRPC parity: put span into ctx seen by downstream
+	ctx = opentracing.ContextWithSpan(ctx, span)
+
 	span.SetTag(string(ext.Component), "arpc-client")
 	span.SetTag("rpc.id", req.ID)
 	span.SetTag("rpc.service", req.ServiceName)
 	span.SetTag("rpc.method", req.Method)
 
-	// Inject trace context into outgoing metadata
-	md := metadata.FromOutgoingContext(newCtx)
+	md := metadata.FromOutgoingContext(ctx)
 	if md == nil {
 		md = metadata.New(map[string]string{})
 	}
+	_ = opentracing.GlobalTracer().Inject(span.Context(), opentracing.TextMap, mdCarrier{md})
+	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	// Inject span context into metadata
-	injectSpanContextToMetadata(span.Context(), md)
-	_ = metadata.NewOutgoingContext(newCtx, md)
-
-	log.Printf("Created client tracing span for request: service=%s method=%s rpcID=%d",
-		req.ServiceName, req.Method, req.ID)
-
-	return req, nil
+	return req, ctx, nil
 }
 
-func (t *ClientTracingElement) ProcessResponse(ctx context.Context, resp *element.RPCResponse) (*element.RPCResponse, error) {
+func (t *ClientTracingElement) ProcessResponse(ctx context.Context, resp *element.RPCResponse) (*element.RPCResponse, context.Context, error) {
 	span := opentracing.SpanFromContext(ctx)
 	if span != nil {
 		if resp.Error != nil {
@@ -110,7 +129,7 @@ func (t *ClientTracingElement) ProcessResponse(ctx context.Context, resp *elemen
 		log.Printf("Finished client tracing span for response")
 	}
 
-	return resp, nil
+	return resp, ctx, nil
 }
 
 func (t *ClientTracingElement) Close() error {
@@ -123,40 +142,34 @@ func (t *ServerTracingElement) Name() string {
 	return "server-tracing"
 }
 
-func (t *ServerTracingElement) ProcessRequest(ctx context.Context, req *element.RPCRequest) (*element.RPCRequest, error) {
-	// Extract trace context from incoming metadata
-	md := metadata.FromIncomingContext(ctx)
-	parentSpanContext := extractSpanContextFromMetadata(md)
-
-	// Create server-side span using global tracer
+func (t *ServerTracingElement) ProcessRequest(ctx context.Context, req *element.RPCRequest) (*element.RPCRequest, context.Context, error) {
 	tracer := opentracing.GlobalTracer()
-	var span opentracing.Span
-	if parentSpanContext != nil {
-		span = tracer.StartSpan(
-			fmt.Sprintf("%s.%s", req.ServiceName, req.Method),
-			ext.SpanKindRPCServer,
-			opentracing.ChildOf(parentSpanContext),
-		)
-	} else {
-		span = tracer.StartSpan(
-			fmt.Sprintf("%s.%s", req.ServiceName, req.Method),
-			ext.SpanKindRPCServer,
-		)
+	md := metadata.FromIncomingContext(ctx)
+
+	var parentCtx opentracing.SpanContext
+	if md != nil {
+		if sc, err := tracer.Extract(opentracing.TextMap, mdCarrier{md}); err == nil {
+			parentCtx = sc
+		}
 	}
 
-	// Add server-side tags
+	span := tracer.StartSpan(
+		fmt.Sprintf("%s.%s", req.ServiceName, req.Method),
+		ext.RPCServerOption(parentCtx), // gRPC-style parent handling
+		ext.SpanKindRPCServer,
+	)
+	// gRPC parity: put span into ctx so handler/response sees it
+	ctx = opentracing.ContextWithSpan(ctx, span)
+
 	span.SetTag(string(ext.Component), "arpc-server")
 	span.SetTag("rpc.id", req.ID)
 	span.SetTag("rpc.service", req.ServiceName)
 	span.SetTag("rpc.method", req.Method)
 
-	log.Printf("Created server tracing span for request: service=%s method=%s rpcID=%d",
-		req.ServiceName, req.Method, req.ID)
-
-	return req, nil
+	return req, ctx, nil
 }
 
-func (t *ServerTracingElement) ProcessResponse(ctx context.Context, resp *element.RPCResponse) (*element.RPCResponse, error) {
+func (t *ServerTracingElement) ProcessResponse(ctx context.Context, resp *element.RPCResponse) (*element.RPCResponse, context.Context, error) {
 	span := opentracing.SpanFromContext(ctx)
 	if span != nil {
 		if resp.Error != nil {
@@ -169,43 +182,10 @@ func (t *ServerTracingElement) ProcessResponse(ctx context.Context, resp *elemen
 		log.Printf("Finished server tracing span for response")
 	}
 
-	return resp, nil
+	return resp, ctx, nil
 }
 
 func (t *ServerTracingElement) Close() error {
 	// No need to close anything, global tracer is managed separately
 	return nil
-}
-
-// Helper functions for trace context propagation
-func injectSpanContextToMetadata(spanCtx opentracing.SpanContext, md metadata.Metadata) {
-	// Simple implementation - in production you'd use proper OpenTracing carriers
-	// For now, we'll use a basic string representation
-	if spanCtx != nil {
-		// This is a simplified implementation - you'd typically use the tracer's Inject method
-		md.Set("x-trace-span-context", fmt.Sprintf("%v", spanCtx))
-	}
-}
-
-func extractSpanContextFromMetadata(md metadata.Metadata) opentracing.SpanContext {
-	// Simple implementation - in production you'd use proper OpenTracing carriers
-	spanCtxStr := md.Get("x-trace-span-context")
-	if spanCtxStr == "" {
-		return nil
-	}
-
-	// This is a simplified implementation - you'd typically use the tracer's Extract method
-	// For now, we'll return nil and let the span be created as a root span
-	// In a real implementation, you'd reconstruct the SpanContext from the metadata
-	return nil
-}
-
-// Legacy support - keep the old interface for backward compatibility
-type TracingElement struct {
-	*ClientTracingElement
-}
-
-func NewTracingElement(serviceName string) (element.RPCElement, error) {
-	log.Printf("Warning: NewTracingElement is deprecated, use NewClientTracingElement or NewServerTracingElement")
-	return NewClientTracingElement(), nil
 }

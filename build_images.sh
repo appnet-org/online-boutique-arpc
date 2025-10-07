@@ -3,7 +3,7 @@
 set -e
 
 # --- Configuration ---
-USER="deskchen"
+USER="appnetorg"
 TAG="latest"
 IMAGE="onlineboutique-arpc"
 YAML_DIR="kubernetes/apply"

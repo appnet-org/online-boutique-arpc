@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-payment
       containers:
       - name: payment
-        image: deskchen/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["payment"]
         imagePullPolicy: Always

@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-cart
       containers:
       - name: cart
-        image: deskchen/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc:latest
         command: ["/app/onlineboutique"]
         args: ["cart"]
         imagePullPolicy: Always
