@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.23.9 AS builder
+FROM golang:1.24.0 AS builder
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -31,6 +31,7 @@ COPY --from=builder /app/onlineboutique .
 COPY services/templates /app/templates
 COPY services/static /app/static
 COPY services/data /app/data
+COPY services/tracing /app/tracing
 
 RUN chmod +x /app/onlineboutique
 

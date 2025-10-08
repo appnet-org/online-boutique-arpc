@@ -8,9 +8,11 @@ import (
 	"strconv"
 
 	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 // Embed the HTML template for the email
@@ -36,8 +38,9 @@ type EmailService struct {
 
 // Run starts the server
 func (s *EmailService) Run() error {
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	serializer := &serializer.SymphonySerializer{}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

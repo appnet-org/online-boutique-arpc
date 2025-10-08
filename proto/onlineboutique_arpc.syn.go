@@ -4,6 +4,7 @@ package onlineboutique
 import (
 	"context"
 	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
 )
 
 // CartServiceClient is the client API for CartService service.
@@ -71,29 +72,77 @@ func RegisterCartServiceServer(s *rpc.Server, srv CartServiceServer) {
 		},
 	}, srv)
 }
-func _CartService_AddItem_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(AddItemRequest)
-	if err := dec(in); err != nil {
+
+func _CartService_AddItem_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(AddItemRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(CartServiceServer).AddItem(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(CartServiceServer).AddItem(ctx, req.Payload.(*AddItemRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
-func _CartService_GetCart_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(GetCartRequest)
-	if err := dec(in); err != nil {
+
+func _CartService_GetCart_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(GetCartRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(CartServiceServer).GetCart(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(CartServiceServer).GetCart(ctx, req.Payload.(*GetCartRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
-func _CartService_EmptyCart_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(EmptyCartRequest)
-	if err := dec(in); err != nil {
+
+func _CartService_EmptyCart_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(EmptyCartRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(CartServiceServer).EmptyCart(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(CartServiceServer).EmptyCart(ctx, req.Payload.(*EmptyCartRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
 
 // RecommendationServiceClient is the client API for RecommendationService service.
@@ -133,13 +182,29 @@ func RegisterRecommendationServiceServer(s *rpc.Server, srv RecommendationServic
 		},
 	}, srv)
 }
-func _RecommendationService_ListRecommendations_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(ListRecommendationsRequest)
-	if err := dec(in); err != nil {
+
+func _RecommendationService_ListRecommendations_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(ListRecommendationsRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(RecommendationServiceServer).ListRecommendations(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(RecommendationServiceServer).ListRecommendations(ctx, req.Payload.(*ListRecommendationsRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
 
 // ProductCatalogServiceClient is the client API for ProductCatalogService service.
@@ -207,29 +272,77 @@ func RegisterProductCatalogServiceServer(s *rpc.Server, srv ProductCatalogServic
 		},
 	}, srv)
 }
-func _ProductCatalogService_ListProducts_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(EmptyUser)
-	if err := dec(in); err != nil {
+
+func _ProductCatalogService_ListProducts_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(EmptyUser)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(ProductCatalogServiceServer).ListProducts(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(ProductCatalogServiceServer).ListProducts(ctx, req.Payload.(*EmptyUser))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
-func _ProductCatalogService_GetProduct_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(GetProductRequest)
-	if err := dec(in); err != nil {
+
+func _ProductCatalogService_GetProduct_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(GetProductRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(ProductCatalogServiceServer).GetProduct(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(ProductCatalogServiceServer).GetProduct(ctx, req.Payload.(*GetProductRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
-func _ProductCatalogService_SearchProducts_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(SearchProductsRequest)
-	if err := dec(in); err != nil {
+
+func _ProductCatalogService_SearchProducts_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(SearchProductsRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(ProductCatalogServiceServer).SearchProducts(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(ProductCatalogServiceServer).SearchProducts(ctx, req.Payload.(*SearchProductsRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
 
 // ShippingServiceClient is the client API for ShippingService service.
@@ -283,21 +396,53 @@ func RegisterShippingServiceServer(s *rpc.Server, srv ShippingServiceServer) {
 		},
 	}, srv)
 }
-func _ShippingService_GetQuote_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(GetQuoteRequest)
-	if err := dec(in); err != nil {
+
+func _ShippingService_GetQuote_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(GetQuoteRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(ShippingServiceServer).GetQuote(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(ShippingServiceServer).GetQuote(ctx, req.Payload.(*GetQuoteRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
-func _ShippingService_ShipOrder_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(ShipOrderRequest)
-	if err := dec(in); err != nil {
+
+func _ShippingService_ShipOrder_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(ShipOrderRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(ShippingServiceServer).ShipOrder(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(ShippingServiceServer).ShipOrder(ctx, req.Payload.(*ShipOrderRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
 
 // CurrencyServiceClient is the client API for CurrencyService service.
@@ -351,21 +496,53 @@ func RegisterCurrencyServiceServer(s *rpc.Server, srv CurrencyServiceServer) {
 		},
 	}, srv)
 }
-func _CurrencyService_GetSupportedCurrencies_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(EmptyUser)
-	if err := dec(in); err != nil {
+
+func _CurrencyService_GetSupportedCurrencies_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(EmptyUser)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(CurrencyServiceServer).GetSupportedCurrencies(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(CurrencyServiceServer).GetSupportedCurrencies(ctx, req.Payload.(*EmptyUser))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
-func _CurrencyService_Convert_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(CurrencyConversionRequest)
-	if err := dec(in); err != nil {
+
+func _CurrencyService_Convert_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(CurrencyConversionRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(CurrencyServiceServer).Convert(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(CurrencyServiceServer).Convert(ctx, req.Payload.(*CurrencyConversionRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
 
 // PaymentServiceClient is the client API for PaymentService service.
@@ -405,13 +582,29 @@ func RegisterPaymentServiceServer(s *rpc.Server, srv PaymentServiceServer) {
 		},
 	}, srv)
 }
-func _PaymentService_Charge_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(ChargeRequest)
-	if err := dec(in); err != nil {
+
+func _PaymentService_Charge_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(ChargeRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(PaymentServiceServer).Charge(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(PaymentServiceServer).Charge(ctx, req.Payload.(*ChargeRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
 
 // EmailServiceClient is the client API for EmailService service.
@@ -451,13 +644,29 @@ func RegisterEmailServiceServer(s *rpc.Server, srv EmailServiceServer) {
 		},
 	}, srv)
 }
-func _EmailService_SendOrderConfirmation_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(SendOrderConfirmationRequest)
-	if err := dec(in); err != nil {
+
+func _EmailService_SendOrderConfirmation_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(SendOrderConfirmationRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(EmailServiceServer).SendOrderConfirmation(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(EmailServiceServer).SendOrderConfirmation(ctx, req.Payload.(*SendOrderConfirmationRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
 
 // CheckoutServiceClient is the client API for CheckoutService service.
@@ -497,13 +706,29 @@ func RegisterCheckoutServiceServer(s *rpc.Server, srv CheckoutServiceServer) {
 		},
 	}, srv)
 }
-func _CheckoutService_PlaceOrder_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(PlaceOrderRequest)
-	if err := dec(in); err != nil {
+
+func _CheckoutService_PlaceOrder_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(PlaceOrderRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(CheckoutServiceServer).PlaceOrder(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(CheckoutServiceServer).PlaceOrder(ctx, req.Payload.(*PlaceOrderRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }
 
 // AdServiceClient is the client API for AdService service.
@@ -543,11 +768,27 @@ func RegisterAdServiceServer(s *rpc.Server, srv AdServiceServer) {
 		},
 	}, srv)
 }
-func _AdService_GetAds_Handler(srv any, ctx context.Context, dec func(any) error) (any, context.Context, error) {
-	in := new(AdRequest)
-	if err := dec(in); err != nil {
+
+func _AdService_GetAds_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
+	req.Payload = new(AdRequest)
+	if err := dec(req.Payload); err != nil {
 		return nil, ctx, err
 	}
-	out, newCtx, err := srv.(AdServiceServer).GetAds(ctx, in)
-	return out, newCtx, err
+	req, ctx, err := chain.ProcessRequest(ctx, req)
+	if err != nil {
+		return nil, ctx, err
+	}
+	result, ctx, err := srv.(AdServiceServer).GetAds(ctx, req.Payload.(*AdRequest))
+	if err != nil {
+		return nil, ctx, err
+	}
+	resp := &element.RPCResponse{
+		ID:     req.ID,
+		Result: result,
+	}
+	resp, ctx, err = chain.ProcessResponse(ctx, resp)
+	if err != nil {
+		return nil, ctx, err
+	}
+	return resp, ctx, err
 }

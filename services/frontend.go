@@ -13,25 +13,21 @@ import (
 	"time"
 
 	"github.com/appnet-org/arpc/pkg/rpc"
-	"github.com/appnet-org/arpc/pkg/rpc/element"
-	"github.com/appnet-org/arpc/pkg/serializer"
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
 	"github.com/appnetorg/online-boutique-arpc/services/validator"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 
 	"github.com/pkg/errors"
 )
 
 const (
-	port            = "8080"
 	defaultCurrency = "CNY"
-	cookieMaxAge    = 60 * 60 * 48
 
-	cookiePrefix    = "shop_"
-	cookieSessionID = cookiePrefix + "session-id"
-	cookieCurrency  = cookiePrefix + "currency"
+	cookiePrefix   = "shop_"
+	cookieCurrency = cookiePrefix + "currency"
 )
 
-type ctxKeyLog struct{}
 type ctxKeySessionID struct{}
 type ctxKeyRequestID struct{}
 
@@ -42,8 +38,8 @@ type platformDetails struct {
 
 var (
 	frontendMessage  = strings.TrimSpace(os.Getenv("FRONTEND_MESSAGE"))
-	isCymbalBrand    = "true" == strings.ToLower(os.Getenv("CYMBAL_BRANDING"))
-	assistantEnabled = "true" == strings.ToLower(os.Getenv("ENABLE_ASSISTANT"))
+	isCymbalBrand    = strings.ToLower(os.Getenv("CYMBAL_BRANDING")) == "true"
+	assistantEnabled = strings.ToLower(os.Getenv("ENABLE_ASSISTANT")) == "true"
 	templates        = template.Must(template.New("").
 				Funcs(template.FuncMap{
 			"renderMoney":        renderMoney,
@@ -66,25 +62,25 @@ type frontendServer struct {
 	port int
 
 	productCatalogSvcAddr string
-	productCatalogClient  pb.ProductCatalogServiceClient
+	productCatalogSvcConn *rpc.Client
 
 	currencySvcAddr string
-	currencyClient  pb.CurrencyServiceClient
+	currencySvcConn *rpc.Client
 
 	cartSvcAddr string
-	cartClient  pb.CartServiceClient
+	cartSvcConn *rpc.Client
 
 	recommendationSvcAddr string
-	recommendationClient  pb.RecommendationServiceClient
+	recommendationSvcConn *rpc.Client
 
 	checkoutSvcAddr string
-	checkoutClient  pb.CheckoutServiceClient
+	checkoutSvcConn *rpc.Client
 
 	shippingSvcAddr string
-	shippingClient  pb.ShippingServiceClient
+	shippingSvcConn *rpc.Client
 
 	adSvcAddr string
-	adClient  pb.AdServiceClient
+	adSvcConn *rpc.Client
 
 	shoppingAssistantSvcAddr string
 }
@@ -106,192 +102,84 @@ func (fe *frontendServer) Run() error {
 	mustMapEnv(&fe.adSvcAddr, "AD_SERVICE_ADDR")
 	mustMapEnv(&fe.shoppingAssistantSvcAddr, "SHOPPING_ASSISTANT_SERVICE_ADDR")
 
-	// Create ARPC clients
-	serializer := &serializer.SymphonySerializer{}
+	mustConnARPC(&fe.currencySvcConn, fe.currencySvcAddr)
+	mustConnARPC(&fe.productCatalogSvcConn, fe.productCatalogSvcAddr)
+	mustConnARPC(&fe.cartSvcConn, fe.cartSvcAddr)
+	mustConnARPC(&fe.recommendationSvcConn, fe.recommendationSvcAddr)
+	mustConnARPC(&fe.shippingSvcConn, fe.shippingSvcAddr)
+	mustConnARPC(&fe.checkoutSvcConn, fe.checkoutSvcAddr)
+	mustConnARPC(&fe.adSvcConn, fe.adSvcAddr)
 
-	// Currency client
-	currencyClient, err := rpc.NewClient(serializer, fe.currencySvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create currency aRPC client: %v", err)
-	}
-	fe.currencyClient = pb.NewCurrencyServiceClient(currencyClient)
-
-	// Product catalog client
-	productCatalogClient, err := rpc.NewClient(serializer, fe.productCatalogSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create product catalog aRPC client: %v", err)
-	}
-	fe.productCatalogClient = pb.NewProductCatalogServiceClient(productCatalogClient)
-
-	// Cart client
-	cartClient, err := rpc.NewClient(serializer, fe.cartSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create cart aRPC client: %v", err)
-	}
-	fe.cartClient = pb.NewCartServiceClient(cartClient)
-
-	// Recommendation client
-	recommendationClient, err := rpc.NewClient(serializer, fe.recommendationSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create recommendation aRPC client: %v", err)
-	}
-	fe.recommendationClient = pb.NewRecommendationServiceClient(recommendationClient)
-
-	// Shipping client
-	shippingClient, err := rpc.NewClient(serializer, fe.shippingSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create shipping aRPC client: %v", err)
-	}
-	fe.shippingClient = pb.NewShippingServiceClient(shippingClient)
-
-	// Checkout client
-	checkoutClient, err := rpc.NewClient(serializer, fe.checkoutSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create checkout aRPC client: %v", err)
-	}
-	fe.checkoutClient = pb.NewCheckoutServiceClient(checkoutClient)
-
-	// Ad client
-	adClient, err := rpc.NewClient(serializer, fe.adSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create ad aRPC client: %v", err)
-	}
-	fe.adClient = pb.NewAdServiceClient(adClient)
-
-	http.HandleFunc("/", fe.homeHandler)
-	http.HandleFunc("/cart/checkout", fe.placeOrderHandler)
-	http.HandleFunc("/cart", fe.addToCartHandler)
+	http.HandleFunc("/", fe.tracingMiddleware(fe.homeHandler))
+	http.HandleFunc("/cart/checkout", fe.tracingMiddleware(fe.placeOrderHandler))
+	http.HandleFunc("/cart", fe.tracingMiddleware(fe.addToCartHandler))
 
 	log.Printf("frontendServer server running at port: %d", fe.port)
 	return http.ListenAndServe(fmt.Sprintf(":%d", fe.port), nil)
 }
 
-// TimingResult holds timing information for RPC calls
-type TimingResult struct {
-	Operation string
-	Duration  time.Duration
-	StartTime time.Time
-	EndTime   time.Time
-	Success   bool
-	Error     error
-	Details   string
-}
+func (fe *frontendServer) tracingMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tracer := opentracing.GlobalTracer()
+		spanName := fmt.Sprintf("HTTP %s %s", r.Method, r.URL.Path)
 
-// TimingCollector collects timing information for analysis
-type TimingCollector struct {
-	Results []TimingResult
-	Start   time.Time
-}
+		span := tracer.StartSpan(spanName)
+		defer span.Finish()
 
-// NewTimingCollector creates a new timing collector
-func NewTimingCollector() *TimingCollector {
-	return &TimingCollector{
-		Results: make([]TimingResult, 0),
-		Start:   time.Now(),
+		// Set HTTP tags
+		ext.HTTPMethod.Set(span, r.Method)
+		ext.HTTPUrl.Set(span, r.URL.String())
+		ext.Component.Set(span, "frontend")
+
+		// Explicitly set service name
+		span.SetTag("service.name", "frontend")
+		span.SetTag("span.kind", "server")
+
+		log.Printf("Created span: %s for service: frontend", spanName)
+
+		// Add span to request context
+		ctx := opentracing.ContextWithSpan(r.Context(), span)
+		r = r.WithContext(ctx)
+
+		// Call the next handler
+		next(w, r)
 	}
-}
-
-// AddTiming adds a timing result to the collector
-func (tc *TimingCollector) AddTiming(operation string, start, end time.Time, success bool, err error, details string) {
-	tc.Results = append(tc.Results, TimingResult{
-		Operation: operation,
-		Duration:  end.Sub(start),
-		StartTime: start,
-		EndTime:   end,
-		Success:   success,
-		Error:     err,
-		Details:   details,
-	})
-}
-
-// LogTimings logs all collected timing information
-func (tc *TimingCollector) LogTimings(userID string) {
-	totalDuration := time.Since(tc.Start)
-
-	log.Printf("=== RPC TIMING ANALYSIS for UserID: %s ===", userID)
-	log.Printf("Total request duration: %d μs", totalDuration.Microseconds())
-	log.Printf("Total RPC calls: %d", len(tc.Results))
-
-	var totalRPCDuration time.Duration
-	successCount := 0
-
-	for i, result := range tc.Results {
-		status := "SUCCESS"
-		if !result.Success {
-			status = "ERROR"
-		} else {
-			successCount++
-		}
-
-		log.Printf("RPC #%d: %s | %d μs | %s | %s",
-			i+1,
-			result.Operation,
-			result.Duration.Microseconds(),
-			status,
-			result.Details)
-
-		if result.Success {
-			totalRPCDuration += result.Duration
-		}
-	}
-
-	log.Printf("Successful RPC calls: %d/%d", successCount, len(tc.Results))
-	log.Printf("Total RPC duration: %d μs", totalRPCDuration.Microseconds())
-	log.Printf("RPC overhead: %d μs (%.2f%%)",
-		(totalDuration - totalRPCDuration).Microseconds(),
-		float64(totalDuration-totalRPCDuration)/float64(totalDuration)*100)
-	log.Printf("=== END TIMING ANALYSIS ===")
 }
 
 // homeHandler handles requests to the home page with detailed timing instrumentation
 func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 	userId := r.FormValue("user_id")
 
-	// Initialize timing collector
-	timing := NewTimingCollector()
-
 	log.Printf("homeHandler: Received request. UserID: %s, Currency: %s", userId, currentCurrency(r))
 
 	// 1. Retrieve currencies
-	currenciesStart := time.Now()
 	currencies, err := fe.getCurrencies(r.Context(), userId)
-	currenciesEnd := time.Now()
 
 	if err != nil {
-		timing.AddTiming("GetCurrencies", currenciesStart, currenciesEnd, false, err, "Error retrieving currencies")
 		log.Printf("homeHandler: Error retrieving currencies: %v", err)
 		renderHTTPError(r, w, errors.Wrap(err, "could not retrieve currencies"), http.StatusInternalServerError)
 		return
 	}
-	timing.AddTiming("GetCurrencies", currenciesStart, currenciesEnd, true, nil, fmt.Sprintf("Retrieved %d currencies", len(currencies)))
 	log.Printf("homeHandler: Retrieved %d currencies", len(currencies))
 
 	// 2. Retrieve products
-	productsStart := time.Now()
 	products, err := fe.getProducts(r.Context(), userId)
-	productsEnd := time.Now()
 
 	if err != nil {
-		timing.AddTiming("GetProducts", productsStart, productsEnd, false, err, "Error retrieving products")
 		log.Printf("homeHandler: Error retrieving products: %v", err)
 		renderHTTPError(r, w, errors.Wrap(err, "could not retrieve products"), http.StatusInternalServerError)
 		return
 	}
-	timing.AddTiming("GetProducts", productsStart, productsEnd, true, nil, fmt.Sprintf("Retrieved %d products", len(products)))
 	log.Printf("homeHandler: Retrieved %d products", len(products))
 
 	// 3. Retrieve cart
-	cartStart := time.Now()
 	cart, err := fe.getCart(r.Context(), userId)
-	cartEnd := time.Now()
 
 	if err != nil {
-		timing.AddTiming("GetCart", cartStart, cartEnd, false, err, "Error retrieving cart")
 		log.Printf("homeHandler: Error retrieving cart: %v", err)
 		renderHTTPError(r, w, errors.Wrap(err, "could not retrieve cart"), http.StatusInternalServerError)
 		return
 	}
-	timing.AddTiming("GetCart", cartStart, cartEnd, true, nil, fmt.Sprintf("Retrieved cart with %d items", cartSize(cart)))
 	log.Printf("homeHandler: Retrieved cart with %d items", cartSize(cart))
 
 	// 4. Process products for display with currency conversion
@@ -301,49 +189,33 @@ func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ps := make([]productView, len(products))
 
-	currencyConversionStart := time.Now()
 	currencyConversionCount := 0
 	currencyConversionErrors := 0
 
 	for i, p := range products {
-		convertStart := time.Now()
 		price, err := fe.convertCurrency(r.Context(), p.GetPriceUsd(), currentCurrency(r), userId)
-		convertEnd := time.Now()
 
 		if err != nil {
 			currencyConversionErrors++
-			timing.AddTiming(fmt.Sprintf("ConvertCurrency_Product_%s", p.GetId()), convertStart, convertEnd, false, err, fmt.Sprintf("Error converting currency for product %s", p.GetId()))
 			log.Printf("homeHandler: Error converting currency for product %s: %v", p.GetId(), err)
 			renderHTTPError(r, w, errors.Wrapf(err, "failed to do currency conversion for product %s", p.GetId()), http.StatusInternalServerError)
 			return
 		}
 
 		currencyConversionCount++
-		timing.AddTiming(fmt.Sprintf("ConvertCurrency_Product_%s", p.GetId()), convertStart, convertEnd, true, nil, fmt.Sprintf("Converted currency for product %s", p.GetId()))
 		ps[i] = productView{p, price}
 	}
-	currencyConversionEnd := time.Now()
-
-	timing.AddTiming("CurrencyConversion_Batch", currencyConversionStart, currencyConversionEnd, currencyConversionErrors == 0,
-		nil, fmt.Sprintf("Converted %d products, %d errors", currencyConversionCount, currencyConversionErrors))
 
 	log.Printf("homeHandler: Processed %d products with currency conversion", len(ps))
 
 	// 5. Get advertisement
-	adStart := time.Now()
 	ad := fe.chooseAd(r.Context(), []string{}, userId)
-	adEnd := time.Now()
 
-	adSuccess := ad != nil
-	adDetails := "No ad retrieved"
 	if ad != nil {
-		adDetails = fmt.Sprintf("Retrieved ad: %s", ad.GetRedirectUrl())
+		log.Printf("homeHandler: Retrieved ad: %s", ad.GetRedirectUrl())
 	}
 
-	timing.AddTiming("GetAd", adStart, adEnd, adSuccess, nil, adDetails)
-
 	// 6. Render template
-	templateStart := time.Now()
 	err = templates.ExecuteTemplate(w, "home", injectCommonTemplateData(r, map[string]interface{}{
 		"show_currency": true,
 		"currencies":    currencies,
@@ -352,18 +224,12 @@ func (fe *frontendServer) homeHandler(w http.ResponseWriter, r *http.Request) {
 		"banner_color":  os.Getenv("BANNER_COLOR"), // illustrates canary deployments
 		"ad":            ad,
 	}))
-	templateEnd := time.Now()
 
 	if err != nil {
-		timing.AddTiming("RenderTemplate", templateStart, templateEnd, false, err, "Error rendering template")
 		log.Printf("homeHandler: Error rendering template: %v", err)
 	} else {
-		timing.AddTiming("RenderTemplate", templateStart, templateEnd, true, nil, "Successfully rendered home template")
 		log.Println("homeHandler: Successfully rendered home page")
 	}
-
-	// Log comprehensive timing analysis
-	timing.LogTimings(userId)
 }
 
 // placeOrderHandler handles placing an order
@@ -406,7 +272,8 @@ func (fe *frontendServer) placeOrderHandler(w http.ResponseWriter, r *http.Reque
 	}
 	log.Println("placeOrderHandler: input validation successful")
 
-	order, err := fe.checkoutClient.
+	checkoutClient := pb.NewCheckoutServiceClient(fe.checkoutSvcConn)
+	order, err := checkoutClient.
 		PlaceOrder(r.Context(), &pb.PlaceOrderRequest{
 			Email: payload.Email,
 			CreditCard: &pb.CreditCardInfo{
@@ -517,12 +384,12 @@ func (fe *frontendServer) addToCartHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (fe *frontendServer) getCurrencies(ctx context.Context, userID string) ([]string, error) {
-	start := time.Now()
-	currs, err := fe.currencyClient.
+	currencyClient := pb.NewCurrencyServiceClient(fe.currencySvcConn)
+	currs, err := currencyClient.
 		GetSupportedCurrencies(ctx, &pb.EmptyUser{UserId: userID})
 
 	if err != nil {
-		log.Printf("getCurrencies RPC failed after %d μs: %v", time.Since(start).Microseconds(), err)
+		log.Printf("getCurrencies RPC failed: %v", err)
 		return nil, err
 	}
 
@@ -533,52 +400,49 @@ func (fe *frontendServer) getCurrencies(ctx context.Context, userID string) ([]s
 		}
 	}
 
-	log.Printf("getCurrencies RPC completed in %d μs, returned %d currencies", time.Since(start).Microseconds(), len(out))
+	log.Printf("getCurrencies RPC completed, returned %d currencies", len(out))
 	return out, nil
 }
 
 func (fe *frontendServer) getProducts(ctx context.Context, userID string) ([]*pb.Product, error) {
-	start := time.Now()
-	resp, err := fe.productCatalogClient.
+	productCatalogClient := pb.NewProductCatalogServiceClient(fe.productCatalogSvcConn)
+	resp, err := productCatalogClient.
 		ListProducts(ctx, &pb.EmptyUser{UserId: userID})
 
 	if err != nil {
-		log.Printf("getProducts RPC failed after %d μs: %v", time.Since(start).Microseconds(), err)
+		log.Printf("getProducts RPC failed: %v", err)
 		return nil, err
 	}
 
 	products := resp.GetProducts()
-	log.Printf("getProducts RPC completed in %d μs, returned %d products", time.Since(start).Microseconds(), len(products))
+	log.Printf("getProducts RPC completed, returned %d products", len(products))
 	return products, err
 }
 
 func (fe *frontendServer) getProduct(ctx context.Context, id string) (*pb.Product, error) {
-	resp, err := fe.productCatalogClient.
+	productCatalogClient := pb.NewProductCatalogServiceClient(fe.productCatalogSvcConn)
+	resp, err := productCatalogClient.
 		GetProduct(ctx, &pb.GetProductRequest{Id: id})
 	return resp, err
 }
 
 func (fe *frontendServer) getCart(ctx context.Context, userID string) ([]*pb.CartItem, error) {
-	start := time.Now()
-	resp, err := fe.cartClient.GetCart(ctx, &pb.GetCartRequest{UserId: userID})
+	cartClient := pb.NewCartServiceClient(fe.cartSvcConn)
+	resp, err := cartClient.GetCart(ctx, &pb.GetCartRequest{UserId: userID})
 
 	if err != nil {
-		log.Printf("getCart RPC failed after %d μs: %v", time.Since(start).Microseconds(), err)
+		log.Printf("getCart RPC failed: %v", err)
 		return nil, err
 	}
 
 	items := resp.GetItems()
-	log.Printf("getCart RPC completed in %d μs, returned %d items", time.Since(start).Microseconds(), len(items))
+	log.Printf("getCart RPC completed, returned %d items", len(items))
 	return items, err
 }
 
-func (fe *frontendServer) emptyCart(ctx context.Context, userID string) error {
-	_, err := fe.cartClient.EmptyCart(ctx, &pb.EmptyCartRequest{UserId: userID})
-	return err
-}
-
 func (fe *frontendServer) insertCart(ctx context.Context, userID, productID string, quantity int32) error {
-	_, err := fe.cartClient.AddItem(ctx, &pb.AddItemRequest{
+	cartClient := pb.NewCartServiceClient(fe.cartSvcConn)
+	_, err := cartClient.AddItem(ctx, &pb.AddItemRequest{
 		UserId: userID,
 		Item: &pb.CartItem{
 			ProductId: productID,
@@ -592,36 +456,25 @@ func (fe *frontendServer) convertCurrency(ctx context.Context, money *pb.Money, 
 		return money, nil
 	}
 
-	start := time.Now()
-	result, err := fe.currencyClient.
+	currencyClient := pb.NewCurrencyServiceClient(fe.currencySvcConn)
+	result, err := currencyClient.
 		Convert(ctx, &pb.CurrencyConversionRequest{
 			From:   money,
 			ToCode: currency,
 			UserId: userID})
 
 	if err != nil {
-		log.Printf("convertCurrency RPC failed after %d μs: %v", time.Since(start).Microseconds(), err)
+		log.Printf("convertCurrency RPC failed: %v", err)
 		return nil, err
 	}
 
-	log.Printf("convertCurrency RPC completed in %d μs: %s -> %s", time.Since(start).Microseconds(), money.GetCurrencyCode(), currency)
+	log.Printf("convertCurrency RPC completed: %s -> %s", money.GetCurrencyCode(), currency)
 	return result, err
 }
 
-func (fe *frontendServer) getShippingQuote(ctx context.Context, items []*pb.CartItem, currency string, userID string) (*pb.Money, error) {
-	quote, err := fe.shippingClient.GetQuote(ctx,
-		&pb.GetQuoteRequest{
-			Address: nil,
-			Items:   items})
-	if err != nil {
-		return nil, err
-	}
-	localized, err := fe.convertCurrency(ctx, quote.GetCostUsd(), currency, userID)
-	return localized, errors.Wrap(err, "failed to convert currency for shipping cost")
-}
-
 func (fe *frontendServer) getRecommendations(ctx context.Context, userID string, productIDs []string) ([]*pb.Product, error) {
-	resp, err := fe.recommendationClient.ListRecommendations(ctx,
+	recommendationClient := pb.NewRecommendationServiceClient(fe.recommendationSvcConn)
+	resp, err := recommendationClient.ListRecommendations(ctx,
 		&pb.ListRecommendationsRequest{UserId: userID, ProductIds: productIDs})
 	if err != nil {
 		return nil, err
@@ -644,19 +497,19 @@ func (fe *frontendServer) getAd(ctx context.Context, ctxKeys []string, userID st
 	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*100)
 	defer cancel()
 
-	start := time.Now()
-	resp, err := fe.adClient.GetAds(ctx, &pb.AdRequest{
+	adClient := pb.NewAdServiceClient(fe.adSvcConn)
+	resp, err := adClient.GetAds(ctx, &pb.AdRequest{
 		ContextKeys: ctxKeys,
 		UserId:      userID,
 	})
 
 	if err != nil {
-		log.Printf("getAd RPC failed after %d μs: %v", time.Since(start).Microseconds(), err)
+		log.Printf("getAd RPC failed: %v", err)
 		return nil, errors.Wrap(err, "failed to get ads")
 	}
 
 	ads := resp.GetAds()
-	log.Printf("getAd RPC completed in %d μs, returned %d ads", time.Since(start).Microseconds(), len(ads))
+	log.Printf("getAd RPC completed, returned %d ads", len(ads))
 	return ads, nil
 }
 

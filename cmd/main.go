@@ -6,6 +6,8 @@ import (
 	"os"
 
 	services "github.com/appnetorg/online-boutique-arpc/services"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
+	"github.com/opentracing/opentracing-go"
 )
 
 type server interface {
@@ -31,6 +33,14 @@ func main() {
 	var srv server
 	var cmd = os.Args[1]
 	println("cmd parsed: ", cmd)
+
+	tracer, closer, err := tracing.Init(cmd)
+	if err != nil {
+		log.Fatalf("ERROR: cannot init Jaeger: %v\n", err)
+	}
+	defer closer.Close()
+	opentracing.SetGlobalTracer(tracer)
+	log.Printf("Jaeger Tracer Initialised for %s", cmd)
 
 	switch cmd {
 	case "cart":

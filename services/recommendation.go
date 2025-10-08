@@ -11,6 +11,7 @@ import (
 	"github.com/appnet-org/arpc/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 // NewRecommendationService returns a new server for the RecommendationService
@@ -25,23 +26,19 @@ type RecommendationService struct {
 	port int
 
 	productCatalogSvcAddr string
-	productCatalogClient  pb.ProductCatalogServiceClient
+	productCatalogSvcConn *rpc.Client
 }
 
 // Run starts the server
 func (s *RecommendationService) Run() error {
 	mustMapEnv(&s.productCatalogSvcAddr, "PRODUCT_CATALOG_SERVICE_ADDR")
 
-	// Create ARPC client
-	serializer := &serializer.SymphonySerializer{}
-	productCatalogClient, err := rpc.NewClient(serializer, s.productCatalogSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create product catalog aRPC client: %v", err)
-	}
-	s.productCatalogClient = pb.NewProductCatalogServiceClient(productCatalogClient)
+	mustConnARPC(&s.productCatalogSvcConn, s.productCatalogSvcAddr)
 
 	// Create ARPC server
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, []element.RPCElement{})
+	serializer := &serializer.SymphonySerializer{}
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
@@ -57,7 +54,8 @@ func (s *RecommendationService) ListRecommendations(ctx context.Context, req *pb
 	log.Printf("ListRecommendations request received for user_id = %v, product_ids = %v", req.GetUserId(), req.GetProductIds())
 
 	// Fetch a list of products from the product catalog.
-	catalogProducts, err := s.productCatalogClient.ListProducts(ctx, &pb.EmptyUser{UserId: req.GetUserId()})
+	productCatalogClient := pb.NewProductCatalogServiceClient(s.productCatalogSvcConn)
+	catalogProducts, err := productCatalogClient.ListProducts(ctx, &pb.EmptyUser{UserId: req.GetUserId()})
 	if err != nil {
 		log.Printf("Error fetching catalog products: %v", err)
 		return nil, ctx, err

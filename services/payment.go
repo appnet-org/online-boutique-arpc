@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 	"github.com/google/uuid"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 type InvalidCreditCardErr struct{}
@@ -84,7 +86,8 @@ type PaymentService struct {
 // Run starts the server
 func (s *PaymentService) Run() error {
 	serializer := &serializer.SymphonySerializer{}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

@@ -12,12 +12,14 @@ import (
 	"time"
 
 	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 // ProductCatalogService implements the ProductCatalogService
@@ -49,12 +51,13 @@ func NewProductCatalogService(port int) *ProductCatalogService {
 	go func() {
 		for {
 			sig := <-sigs
-			if sig == syscall.SIGUSR1 {
+			switch sig {
+			case syscall.SIGUSR1:
 				log.Println("Enabling catalog reload")
 				svc.mu.Lock()
 				svc.reloadCatalog = true
 				svc.mu.Unlock()
-			} else if sig == syscall.SIGUSR2 {
+			case syscall.SIGUSR2:
 				log.Println("Disabling catalog reload")
 				svc.mu.Lock()
 				svc.reloadCatalog = false
@@ -105,7 +108,8 @@ func (s *ProductCatalogService) parseCatalog() []*pb.Product {
 // Run starts the ARPC server
 func (s *ProductCatalogService) Run() error {
 	serializer := &serializer.SymphonySerializer{}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

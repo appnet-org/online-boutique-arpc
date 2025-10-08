@@ -4,15 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
+	"os"
 	"strconv"
 
 	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
 const (
@@ -28,7 +30,7 @@ type CurrencyService struct {
 // NewCurrencyService returns a new server for the CurrencyService
 func NewCurrencyService(port int) *CurrencyService {
 	// Read the file content into a []byte
-	currencyData, err := ioutil.ReadFile(filePath)
+	currencyData, err := os.ReadFile(filePath)
 	if err != nil {
 		log.Fatalf("Failed to read file: %v", err)
 	}
@@ -45,8 +47,9 @@ func NewCurrencyService(port int) *CurrencyService {
 
 // Run starts the server
 func (s *CurrencyService) Run() error {
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	serializer := &serializer.SymphonySerializer{}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, nil)
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/appnet-org/arpc/pkg/serializer"
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
@@ -48,22 +49,22 @@ type CheckoutService struct {
 	port int
 
 	productCatalogSvcAddr string
-	productCatalogClient  pb.ProductCatalogServiceClient
+	productCatalogSvcConn *rpc.Client
 
 	cartSvcAddr string
-	cartClient  pb.CartServiceClient
+	cartSvcConn *rpc.Client
 
 	currencySvcAddr string
-	currencyClient  pb.CurrencyServiceClient
+	currencySvcConn *rpc.Client
 
 	shippingSvcAddr string
-	shippingClient  pb.ShippingServiceClient
+	shippingSvcConn *rpc.Client
 
 	emailSvcAddr string
-	emailClient  pb.EmailServiceClient
+	emailSvcConn *rpc.Client
 
 	paymentSvcAddr string
-	paymentClient  pb.PaymentServiceClient
+	paymentSvcConn *rpc.Client
 }
 
 // Run starts the server
@@ -75,53 +76,17 @@ func (cs *CheckoutService) Run() error {
 	mustMapEnv(&cs.emailSvcAddr, "EMAIL_SERVICE_ADDR")
 	mustMapEnv(&cs.paymentSvcAddr, "PAYMENT_SERVICE_ADDR")
 
-	// Create ARPC clients
-	serializer := &serializer.SymphonySerializer{}
-
-	// Shipping client
-	shippingClient, err := rpc.NewClient(serializer, cs.shippingSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create shipping aRPC client: %v", err)
-	}
-	cs.shippingClient = pb.NewShippingServiceClient(shippingClient)
-
-	// Product catalog client
-	productCatalogClient, err := rpc.NewClient(serializer, cs.productCatalogSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create product catalog aRPC client: %v", err)
-	}
-	cs.productCatalogClient = pb.NewProductCatalogServiceClient(productCatalogClient)
-
-	// Cart client
-	cartClient, err := rpc.NewClient(serializer, cs.cartSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create cart aRPC client: %v", err)
-	}
-	cs.cartClient = pb.NewCartServiceClient(cartClient)
-
-	// Currency client
-	currencyClient, err := rpc.NewClient(serializer, cs.currencySvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create currency aRPC client: %v", err)
-	}
-	cs.currencyClient = pb.NewCurrencyServiceClient(currencyClient)
-
-	// Email client
-	emailClient, err := rpc.NewClient(serializer, cs.emailSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create email aRPC client: %v", err)
-	}
-	cs.emailClient = pb.NewEmailServiceClient(emailClient)
-
-	// Payment client
-	paymentClient, err := rpc.NewClient(serializer, cs.paymentSvcAddr, []element.RPCElement{})
-	if err != nil {
-		log.Fatalf("Failed to create payment aRPC client: %v", err)
-	}
-	cs.paymentClient = pb.NewPaymentServiceClient(paymentClient)
+	mustConnARPC(&cs.shippingSvcConn, cs.shippingSvcAddr)
+	mustConnARPC(&cs.productCatalogSvcConn, cs.productCatalogSvcAddr)
+	mustConnARPC(&cs.cartSvcConn, cs.cartSvcAddr)
+	mustConnARPC(&cs.currencySvcConn, cs.currencySvcAddr)
+	mustConnARPC(&cs.emailSvcConn, cs.emailSvcAddr)
+	mustConnARPC(&cs.paymentSvcConn, cs.paymentSvcAddr)
 
 	// Create ARPC server
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(cs.port), serializer, []element.RPCElement{})
+	serializer := &serializer.SymphonySerializer{}
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(cs.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
@@ -235,7 +200,8 @@ func (cs *CheckoutService) prepareOrderItemsAndShippingQuoteFromCart(ctx context
 }
 
 func (cs *CheckoutService) quoteShipping(ctx context.Context, address *pb.Address, items []*pb.CartItem) (*pb.Money, error) {
-	shippingQuote, err := cs.shippingClient.GetQuote(ctx, &pb.GetQuoteRequest{
+	shippingClient := pb.NewShippingServiceClient(cs.shippingSvcConn)
+	shippingQuote, err := shippingClient.GetQuote(ctx, &pb.GetQuoteRequest{
 		Address: address,
 		Items:   items})
 	if err != nil {
@@ -245,7 +211,8 @@ func (cs *CheckoutService) quoteShipping(ctx context.Context, address *pb.Addres
 }
 
 func (cs *CheckoutService) getUserCart(ctx context.Context, userID string) ([]*pb.CartItem, error) {
-	cart, err := cs.cartClient.GetCart(ctx, &pb.GetCartRequest{UserId: userID})
+	cartClient := pb.NewCartServiceClient(cs.cartSvcConn)
+	cart, err := cartClient.GetCart(ctx, &pb.GetCartRequest{UserId: userID})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user cart during checkout: %+v", err)
 	}
@@ -253,7 +220,8 @@ func (cs *CheckoutService) getUserCart(ctx context.Context, userID string) ([]*p
 }
 
 func (cs *CheckoutService) emptyUserCart(ctx context.Context, userID string) error {
-	if _, err := cs.cartClient.EmptyCart(ctx, &pb.EmptyCartRequest{UserId: userID}); err != nil {
+	cartClient := pb.NewCartServiceClient(cs.cartSvcConn)
+	if _, err := cartClient.EmptyCart(ctx, &pb.EmptyCartRequest{UserId: userID}); err != nil {
 		return fmt.Errorf("failed to empty user cart during checkout: %+v", err)
 	}
 	return nil
@@ -261,7 +229,7 @@ func (cs *CheckoutService) emptyUserCart(ctx context.Context, userID string) err
 
 func (cs *CheckoutService) prepOrderItems(ctx context.Context, items []*pb.CartItem, userCurrency string) ([]*pb.OrderItem, error) {
 	out := make([]*pb.OrderItem, len(items))
-	cl := cs.productCatalogClient
+	cl := pb.NewProductCatalogServiceClient(cs.productCatalogSvcConn)
 
 	for i, item := range items {
 		product, err := cl.GetProduct(ctx, &pb.GetProductRequest{Id: item.GetProductId()})
@@ -280,7 +248,8 @@ func (cs *CheckoutService) prepOrderItems(ctx context.Context, items []*pb.CartI
 }
 
 func (cs *CheckoutService) convertCurrency(from *pb.Money, toCurrency string) (*pb.Money, error) {
-	result, err := cs.currencyClient.Convert(context.TODO(), &pb.CurrencyConversionRequest{
+	currencyClient := pb.NewCurrencyServiceClient(cs.currencySvcConn)
+	result, err := currencyClient.Convert(context.TODO(), &pb.CurrencyConversionRequest{
 		From:   from,
 		ToCode: toCurrency})
 	if err != nil {
@@ -290,7 +259,8 @@ func (cs *CheckoutService) convertCurrency(from *pb.Money, toCurrency string) (*
 }
 
 func (cs *CheckoutService) chargeCard(ctx context.Context, amount *pb.Money, paymentInfo *pb.CreditCardInfo) (string, error) {
-	paymentResp, err := cs.paymentClient.Charge(ctx, &pb.ChargeRequest{
+	paymentClient := pb.NewPaymentServiceClient(cs.paymentSvcConn)
+	paymentResp, err := paymentClient.Charge(ctx, &pb.ChargeRequest{
 		Amount:     amount,
 		CreditCard: paymentInfo})
 	if err != nil {
@@ -300,14 +270,16 @@ func (cs *CheckoutService) chargeCard(ctx context.Context, amount *pb.Money, pay
 }
 
 func (cs *CheckoutService) sendOrderConfirmation(ctx context.Context, email string, order *pb.OrderResult) error {
-	_, err := cs.emailClient.SendOrderConfirmation(ctx, &pb.SendOrderConfirmationRequest{
+	emailClient := pb.NewEmailServiceClient(cs.emailSvcConn)
+	_, err := emailClient.SendOrderConfirmation(ctx, &pb.SendOrderConfirmationRequest{
 		Email: email,
 		Order: order})
 	return err
 }
 
 func (cs *CheckoutService) shipOrder(ctx context.Context, address *pb.Address, items []*pb.CartItem) (string, error) {
-	resp, err := cs.shippingClient.ShipOrder(ctx, &pb.ShipOrderRequest{
+	shippingClient := pb.NewShippingServiceClient(cs.shippingSvcConn)
+	resp, err := shippingClient.ShipOrder(ctx, &pb.ShipOrderRequest{
 		Address: address,
 		Items:   items})
 	if err != nil {
