@@ -19,7 +19,9 @@ Find **Protocol Buffers Descriptions** at the [`./protos` directory](/protos).
 ## Build Docker Images and Push them to DockerHub
 
 ```bash
-sudo bash build_images.sh # you need to change the username and run docker login
+# You may need to change the $USER in `build_images.sh`
+# and run `docker login -u $username`
+sudo bash build_images.sh
 ```
 
 ## Run Bookinfo Applicaton
@@ -39,4 +41,12 @@ curl -X POST http://10.96.88.88/cart/checkout -d "email=test@example.com" -d "st
 
 # Destroy
 kubectl delete pv,pvc,sa,all --all
+```
+
+## Open Jaeger UI
+
+```bash
+kubectl port-forward svc/jaeger 16686:16686
+
+xdg-open http://localhost:16686
 ```
