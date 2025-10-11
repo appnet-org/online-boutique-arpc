@@ -24,7 +24,7 @@ type ServerTracingElement struct {
 }
 
 var (
-	defaultSampleRatio float64 = 1
+	defaultSampleRatio float64 = 0.02 // 2% sampling
 )
 
 // NewClientTracingElement creates a new client-side tracing element
