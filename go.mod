@@ -7,7 +7,7 @@ replace github.com/appnetorg/online-boutique-arpc/services => ./services
 replace github.com/appnetorg/online-boutique-arpc/proto => ./proto
 
 require (
-	github.com/appnet-org/arpc v0.0.0-20251007162836-bbeaac30b81f
+	github.com/appnet-org/arpc v0.0.0-20251012200116-e7a755b7451d
 	github.com/appnetorg/online-boutique-arpc/proto v0.0.0-00010101000000-000000000000
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/google/uuid v1.6.0
@@ -34,10 +34,9 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.42.0 // indirect
-	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251006185510-65f7160b3a87 // indirect
+	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/text v0.30.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251007200510-49b9836ed3ff // indirect
 )

@@ -179,7 +179,7 @@ func (t *ServerTracingElement) ProcessResponse(ctx context.Context, resp *elemen
 			span.SetTag("rpc.success", true)
 		}
 		span.Finish()
-		log.Printf("Finished server tracing span for response")
+		// log.Printf("Finished server tracing span for response")
 	}
 
 	return resp, ctx, nil
