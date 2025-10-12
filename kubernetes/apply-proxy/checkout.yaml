@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout
+  labels:
+    app: checkout
+    service: checkout
+spec:
+  clusterIP: None
+  ports:
+  - port: 8087
+    targetPort: 8087
+    name: arpc-checkout
+    protocol: UDP
+  selector:
+    app: checkout
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onlineboutique-checkout
+  labels:
+    account: checkout
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkout
+  labels:
+    app: checkout
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: checkout
+  template:
+    metadata:
+      labels:
+        app: checkout
+    spec:
+      serviceAccountName: onlineboutique-checkout
+      containers:
+      - name: checkout
+        image: appnetorg/onlineboutique-arpc:latest
+        command:
+        - /app/onlineboutique
+        args:
+        - checkout
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8087
+      - name: symphony-proxy
+        image: appnetorg/symphony-proxy:latest
+        command:
+        - /app/proxy
+        securityContext:
+          runAsUser: 1337
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+      initContainers:
+      - name: set-iptables
+        image: appnetorg/symphony-proxy-init-container:latest
+        command:
+        - /bin/sh
+        - -c
+        - bash /apply_symphony_iptables.sh
+        securityContext:
+          runAsUser: 0
+          capabilities:
+            add:
+            - NET_ADMIN
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: checkout-pv
+spec:
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  storageClassName: checkout-storage
+  hostPath:
+    path: /data/volumes/checkout-pv
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: checkout-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: checkout-storage
+  resources:
+    requests:
+      storage: 1Gi

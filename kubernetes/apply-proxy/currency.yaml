@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: currency
+  labels:
+    app: currency
+    service: currency
+spec:
+  clusterIP: None
+  ports:
+  - port: 8083
+    targetPort: 8083
+    name: arpc-currency
+    protocol: UDP
+  selector:
+    app: currency
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onlineboutique-currency
+  labels:
+    account: currency
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: currency
+  labels:
+    app: currency
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: currency
+  template:
+    metadata:
+      labels:
+        app: currency
+    spec:
+      serviceAccountName: onlineboutique-currency
+      containers:
+      - name: currency
+        image: appnetorg/onlineboutique-arpc:latest
+        command:
+        - /app/onlineboutique
+        args:
+        - currency
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8083
+      - name: symphony-proxy
+        image: appnetorg/symphony-proxy:latest
+        command:
+        - /app/proxy
+        securityContext:
+          runAsUser: 1337
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+      initContainers:
+      - name: set-iptables
+        image: appnetorg/symphony-proxy-init-container:latest
+        command:
+        - /bin/sh
+        - -c
+        - bash /apply_symphony_iptables.sh
+        securityContext:
+          runAsUser: 0
+          capabilities:
+            add:
+            - NET_ADMIN
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: currency-pv
+spec:
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  storageClassName: currency-storage
+  hostPath:
+    path: /data/volumes/currency-pv
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: currency-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: currency-storage
+  resources:
+    requests:
+      storage: 1Gi

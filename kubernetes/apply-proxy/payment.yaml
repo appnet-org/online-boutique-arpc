@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment
+  labels:
+    app: payment
+    service: payment
+spec:
+  clusterIP: None
+  ports:
+  - port: 8084
+    targetPort: 8084
+    name: arpc-payment
+    protocol: UDP
+  selector:
+    app: payment
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onlineboutique-payment
+  labels:
+    account: payment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+  labels:
+    app: payment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment
+  template:
+    metadata:
+      labels:
+        app: payment
+    spec:
+      serviceAccountName: onlineboutique-payment
+      containers:
+      - name: payment
+        image: appnetorg/onlineboutique-arpc:latest
+        command:
+        - /app/onlineboutique
+        args:
+        - payment
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8084
+      - name: symphony-proxy
+        image: appnetorg/symphony-proxy:latest
+        command:
+        - /app/proxy
+        securityContext:
+          runAsUser: 1337
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+      initContainers:
+      - name: set-iptables
+        image: appnetorg/symphony-proxy-init-container:latest
+        command:
+        - /bin/sh
+        - -c
+        - bash /apply_symphony_iptables.sh
+        securityContext:
+          runAsUser: 0
+          capabilities:
+            add:
+            - NET_ADMIN
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: payment-pv
+spec:
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  storageClassName: payment-storage
+  hostPath:
+    path: /data/volumes/payment-pv
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: payment-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: payment-storage
+  resources:
+    requests:
+      storage: 1Gi

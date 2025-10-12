@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: shipping
+  labels:
+    app: shipping
+    service: shipping
+spec:
+  clusterIP: None
+  ports:
+  - port: 8085
+    targetPort: 8085
+    name: arpc-shipping
+    protocol: UDP
+  selector:
+    app: shipping
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onlineboutique-shipping
+  labels:
+    account: shipping
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipping
+  labels:
+    app: shipping
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shipping
+  template:
+    metadata:
+      labels:
+        app: shipping
+    spec:
+      serviceAccountName: onlineboutique-shipping
+      containers:
+      - name: shipping
+        image: appnetorg/onlineboutique-arpc:latest
+        command:
+        - /app/onlineboutique
+        args:
+        - shipping
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8085
+      - name: symphony-proxy
+        image: appnetorg/symphony-proxy:latest
+        command:
+        - /app/proxy
+        securityContext:
+          runAsUser: 1337
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+      initContainers:
+      - name: set-iptables
+        image: appnetorg/symphony-proxy-init-container:latest
+        command:
+        - /bin/sh
+        - -c
+        - bash /apply_symphony_iptables.sh
+        securityContext:
+          runAsUser: 0
+          capabilities:
+            add:
+            - NET_ADMIN
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: shipping-pv
+spec:
+  volumeMode: Filesystem
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  storageClassName: shipping-storage
+  hostPath:
+    path: /data/volumes/shipping-pv
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shipping-pvc
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: shipping-storage
+  resources:
+    requests:
+      storage: 1Gi
