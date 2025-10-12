@@ -15,9 +15,9 @@ microservices](./architecture-diagram.png)](./architecture-diagram.png)
 ## Build Docker Images and Push them to DockerHub
 
 ```bash
-# You may need to change the $USER in `build_images.sh`
-# and run `docker login -u $username`
-sudo bash build_images.sh
+# You may need to change the $USER in `build_images.sh`,
+# and set $UPDATE_ARPC to use latest/pinned aRPC version. 
+sudo bash build_images.sh # run `docker login -u $username` first to connect to DockerHub.
 ```
 
 ## Run Bookinfo Applicaton
