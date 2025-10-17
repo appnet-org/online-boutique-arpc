@@ -2,10 +2,12 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
 
+	"github.com/appnet-org/arpc/pkg/logging"
 	"github.com/appnet-org/arpc/pkg/rpc"
 	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
@@ -31,6 +33,11 @@ type RecommendationService struct {
 
 // Run starts the server
 func (s *RecommendationService) Run() error {
+	err := logging.Init(getLoggingConfig())
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize logging: %v", err))
+	}
+
 	mustMapEnv(&s.productCatalogSvcAddr, "PRODUCT_CATALOG_SERVICE_ADDR")
 
 	mustConnARPC(&s.productCatalogSvcConn, s.productCatalogSvcAddr)

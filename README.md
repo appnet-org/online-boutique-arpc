@@ -17,7 +17,10 @@ microservices](./architecture-diagram.png)](./architecture-diagram.png)
 ```bash
 # You may need to change the $USER in `build_images.sh`,
 # and set $UPDATE_ARPC to use latest/pinned aRPC version. 
-sudo bash build_images.sh # run `docker login -u $username` first to connect to DockerHub.
+bash build_images.sh # run `docker login -u $username` first to connect to DockerHub.
+
+# To test the build locally
+go build -o /tmp/test_build ./cmd/main.go
 ```
 
 ## Run Bookinfo Applicaton

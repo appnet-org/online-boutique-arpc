@@ -7,7 +7,7 @@ replace github.com/appnetorg/online-boutique-arpc/services => ./services
 replace github.com/appnetorg/online-boutique-arpc/proto => ./proto
 
 require (
-	github.com/appnet-org/arpc v0.0.0-20251012200116-e7a755b7451d
+	github.com/appnet-org/arpc v0.0.0-20251014033052-bf757f22f6a2
 	github.com/appnetorg/online-boutique-arpc/proto v0.0.0-00010101000000-000000000000
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/google/uuid v1.6.0

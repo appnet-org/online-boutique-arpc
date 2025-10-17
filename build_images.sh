@@ -29,10 +29,10 @@ rm -f $YAML_DIR/*.yaml.bak
 
 # 2. Build the Docker image
 echo "Building Docker image: $NEW_IMAGE"
-docker build -t "$NEW_IMAGE" -f Dockerfile .
+sudo docker build -t "$NEW_IMAGE" -f Dockerfile .
 
 # 3. Push the Docker image
 echo "Pushing Docker image: $NEW_IMAGE"
-docker push "$NEW_IMAGE"
+sudo docker push "$NEW_IMAGE"
 
 echo "✅ Process complete."

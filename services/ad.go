@@ -2,10 +2,12 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
 
+	"github.com/appnet-org/arpc/pkg/logging"
 	"github.com/appnet-org/arpc/pkg/rpc"
 	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
@@ -34,6 +36,11 @@ type AdService struct {
 
 // Run starts the server
 func (s *AdService) Run() error {
+	err := logging.Init(getLoggingConfig())
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize logging: %v", err))
+	}
+
 	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	serializer := &serializer.SymphonySerializer{}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)

@@ -3,9 +3,11 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
 
+	"github.com/appnet-org/arpc/pkg/logging"
 	"github.com/appnet-org/arpc/pkg/rpc"
 	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
@@ -32,6 +34,10 @@ type CartService struct {
 
 // Run starts the server
 func (s *CartService) Run() error {
+	err := logging.Init(getLoggingConfig())
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize logging: %v", err))
+	}
 
 	mustMapEnv(&s.cartRedisAddr, "CART_REDIS_ADDR")
 

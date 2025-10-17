@@ -5,8 +5,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/HdrHistogram/hdrhistogram-go v1.1.2 h1:5IcZpTvzydCQeHzK4Ef/D5rrSqwxob0t8PQPMybUNFM=
 github.com/HdrHistogram/hdrhistogram-go v1.1.2/go.mod h1:yDgFjdqOqDEKOvasDdhWNXYg9BVp4O+o5f6V/ehm6Oo=
 github.com/ajstarks/svgo v0.0.0-20180226025133-644b8db467af/go.mod h1:K08gAheRH3/J6wwsYMMT4xOr94bZjxIelGM0+d/wbFw=
-github.com/appnet-org/arpc v0.0.0-20251012200116-e7a755b7451d h1:1maGoY7vWE/OWp3+Ggc/U76YsBNq8TEzJXZRHpWpOKs=
-github.com/appnet-org/arpc v0.0.0-20251012200116-e7a755b7451d/go.mod h1:UlPwzxJw2K8pCLd2pxirK4Hi+HbcXG2ruaf3XeRruno=
+github.com/appnet-org/arpc v0.0.0-20251014033052-bf757f22f6a2 h1:kvSH767XEYxr/hIsuUyZWZLzAKYvgWNkYCubJJQYmQ4=
+github.com/appnet-org/arpc v0.0.0-20251014033052-bf757f22f6a2/go.mod h1:UlPwzxJw2K8pCLd2pxirK4Hi+HbcXG2ruaf3XeRruno=
 github.com/bsm/ginkgo/v2 v2.12.0 h1:Ny8MWAHyOepLGlLKYmXG4IEkioBysk6GpaRTLC8zwWs=
 github.com/bsm/ginkgo/v2 v2.12.0/go.mod h1:SwYbGRRDovPVboqFv0tPTcG1sN61LM1Z4ARdbAV9g4c=
 github.com/bsm/gomega v1.27.10 h1:yeMWxP2pV2fG3FgAODIY8EiRE3dy0aeFYt4l7wh6yKA=

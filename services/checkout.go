@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"strconv"
 
+	"github.com/appnet-org/arpc/pkg/logging"
 	"github.com/appnet-org/arpc/pkg/rpc"
 	"github.com/appnet-org/arpc/pkg/rpc/element"
 
@@ -30,12 +30,6 @@ var (
 	ErrInvalidValue        = errors.New("one of the specified money values is invalid")
 	ErrMismatchingCurrency = errors.New("mismatching currency codes")
 )
-
-func init() {
-	// Configure default log output
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
-	log.SetOutput(os.Stdout)
-}
 
 // NewCheckoutService returns a new server for the CheckoutService
 func NewCheckoutService(port int) *CheckoutService {
@@ -69,6 +63,11 @@ type CheckoutService struct {
 
 // Run starts the server
 func (cs *CheckoutService) Run() error {
+	err := logging.Init(getLoggingConfig())
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize logging: %v", err))
+	}
+
 	mustMapEnv(&cs.shippingSvcAddr, "SHIPPING_SERVICE_ADDR")
 	mustMapEnv(&cs.productCatalogSvcAddr, "PRODUCT_CATALOG_SERVICE_ADDR")
 	mustMapEnv(&cs.cartSvcAddr, "CART_SERVICE_ADDR")

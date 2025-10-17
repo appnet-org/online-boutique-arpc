@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/appnet-org/arpc/pkg/logging"
 	"github.com/appnet-org/arpc/pkg/rpc"
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
 	"github.com/appnetorg/online-boutique-arpc/services/validator"
@@ -93,6 +94,11 @@ func NewFrontendServer(port int) *frontendServer {
 
 // Run the server
 func (fe *frontendServer) Run() error {
+	err := logging.Init(getLoggingConfig())
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize logging: %v", err))
+	}
+
 	mustMapEnv(&fe.productCatalogSvcAddr, "PRODUCT_CATALOG_SERVICE_ADDR")
 	mustMapEnv(&fe.currencySvcAddr, "CURRENCY_SERVICE_ADDR")
 	mustMapEnv(&fe.cartSvcAddr, "CART_SERVICE_ADDR")

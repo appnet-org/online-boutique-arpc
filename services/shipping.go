@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"strconv"
 
+	"github.com/appnet-org/arpc/pkg/logging"
 	"github.com/appnet-org/arpc/pkg/rpc"
 	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
@@ -32,6 +33,11 @@ type ShippingService struct {
 
 // Run starts the server
 func (s *ShippingService) Run() error {
+	err := logging.Init(getLoggingConfig())
+	if err != nil {
+		panic(fmt.Sprintf("Failed to initialize logging: %v", err))
+	}
+
 	serializer := &serializer.SymphonySerializer{}
 	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)

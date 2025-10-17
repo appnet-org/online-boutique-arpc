@@ -5,12 +5,31 @@ import (
 	"log"
 	"os"
 
+	"github.com/appnet-org/arpc/pkg/logging"
 	"github.com/appnet-org/arpc/pkg/rpc"
 	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 	"github.com/pkg/errors"
 )
+
+// getLoggingConfig reads logging configuration from environment variables with defaults
+func getLoggingConfig() *logging.Config {
+	level := os.Getenv("LOG_LEVEL")
+	if level == "" {
+		level = "debug"
+	}
+
+	format := os.Getenv("LOG_FORMAT")
+	if format == "" {
+		format = "console"
+	}
+
+	return &logging.Config{
+		Level:  level,
+		Format: format,
+	}
+}
 
 func mustMapEnv(target *string, envKey string) {
 	v := os.Getenv(envKey)

@@ -51,7 +51,7 @@ spec:
         - containerPort: 8089
         env:
         - name: LOG_LEVEL
-          value: info
+          value: debug
       - name: symphony-proxy
         image: appnetorg/symphony-proxy:latest
         command:
@@ -64,7 +64,7 @@ spec:
             - NET_RAW
         env:
         - name: LOG_LEVEL
-          value: info
+          value: debug
       initContainers:
       - name: set-iptables
         image: appnetorg/symphony-proxy-init-container:latest
