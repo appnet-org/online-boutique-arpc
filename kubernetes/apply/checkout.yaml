@@ -11,8 +11,8 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - port: 8087
-    targetPort: 8087
+  - port: 11007
+    targetPort: 11007
     name: arpc-checkout
     protocol: UDP
   selector:
@@ -49,7 +49,7 @@ spec:
         args: ["checkout"]
         imagePullPolicy: Always
         ports:
-        - containerPort: 8087
+        - containerPort: 11007
 ---
 # volume and persistent volume claim of `checkout`
 apiVersion: v1

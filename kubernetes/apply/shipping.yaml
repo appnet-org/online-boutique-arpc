@@ -11,8 +11,8 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - port: 8085
-    targetPort: 8085
+  - port: 11005
+    targetPort: 11005
     name: arpc-shipping
     protocol: UDP
   selector:
@@ -49,7 +49,7 @@ spec:
         args: ["shipping"]
         imagePullPolicy: Always
         ports:
-        - containerPort: 8085
+        - containerPort: 11005
 ---
 # volume and persistent volume claim of `shipping`
 apiVersion: v1

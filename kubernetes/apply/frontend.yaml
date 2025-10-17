@@ -12,7 +12,7 @@ spec:
   ports:
   - name: frontend
     port: 80
-    targetPort: 8080
+    targetPort: 11000
   selector:
     app: frontend
 ---
@@ -47,7 +47,7 @@ spec:
         args: ["frontend"]
         imagePullPolicy: Always
         ports:
-        - containerPort: 8080
+        - containerPort: 11000
 ---
 # volume and persistent volume claim of `frontend`
 apiVersion: v1

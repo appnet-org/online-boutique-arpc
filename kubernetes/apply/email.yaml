@@ -11,8 +11,8 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - port: 8086
-    targetPort: 8086
+  - port: 11006
+    targetPort: 11006
     name: arpc-email
     protocol: UDP
   selector:
@@ -49,7 +49,7 @@ spec:
         args: ["email"]
         imagePullPolicy: Always
         ports:
-        - containerPort: 8086
+        - containerPort: 11006
 ---
 # volume and persistent volume claim of `email`
 apiVersion: v1

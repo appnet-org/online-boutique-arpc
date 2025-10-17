@@ -16,17 +16,17 @@ type server interface {
 
 func main() {
 	var (
-		// port            = flag.Int("port", 8080, "The service port")
-		frontendport       = flag.Int("frontendport", 8080, "frontend service port")
-		cartport           = flag.Int("cartaddr", 8081, "cart service port")
-		productcatalogport = flag.Int("productcatalogport", 8082, "productcatalog service port")
-		currencyport       = flag.Int("currencyport", 8083, "currency service port")
-		paymentport        = flag.Int("paymentport", 8084, "payment service port")
-		shippingport       = flag.Int("shippingport", 8085, "shipping service port")
-		emailport          = flag.Int("emailport", 8086, "email service port")
-		checkoutport       = flag.Int("checkoutport", 8087, "checkout service port")
-		recommendationport = flag.Int("recommendationport", 8088, "recommendation service port")
-		adport             = flag.Int("adport", 8089, "ad service port")
+		// port            = flag.Int("port", 11000, "The service port")
+		frontendport       = flag.Int("frontendport", 11000, "frontend service port")
+		cartport           = flag.Int("cartaddr", 11001, "cart service port")
+		productcatalogport = flag.Int("productcatalogport", 11002, "productcatalog service port")
+		currencyport       = flag.Int("currencyport", 11003, "currency service port")
+		paymentport        = flag.Int("paymentport", 11004, "payment service port")
+		shippingport       = flag.Int("shippingport", 11005, "shipping service port")
+		emailport          = flag.Int("emailport", 11006, "email service port")
+		checkoutport       = flag.Int("checkoutport", 11007, "checkout service port")
+		recommendationport = flag.Int("recommendationport", 11008, "recommendation service port")
+		adport             = flag.Int("adport", 11009, "ad service port")
 	)
 	flag.Parse()
 

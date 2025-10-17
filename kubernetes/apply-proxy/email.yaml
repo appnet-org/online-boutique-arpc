@@ -8,8 +8,8 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - port: 8086
-    targetPort: 8086
+  - port: 11006
+    targetPort: 11006
     name: arpc-email
     protocol: UDP
   selector:
@@ -48,7 +48,7 @@ spec:
         - email
         imagePullPolicy: Always
         ports:
-        - containerPort: 8086
+        - containerPort: 11006
         env:
         - name: LOG_LEVEL
           value: debug

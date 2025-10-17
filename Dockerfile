@@ -36,14 +36,14 @@ COPY services/tracing /app/tracing
 RUN chmod +x /app/onlineboutique
 
 # Set environment variables
-ENV CART_SERVICE_ADDR="cart:8081" \
+ENV CART_SERVICE_ADDR="cart:11001" \
     CART_REDIS_ADDR="cart-redis:6379" \
-    PRODUCT_CATALOG_SERVICE_ADDR="productcatalog:8082" \
-    CURRENCY_SERVICE_ADDR="currency:8083" \
-    PAYMENT_SERVICE_ADDR="payment:8084" \
-    SHIPPING_SERVICE_ADDR="shipping:8085" \
-    EMAIL_SERVICE_ADDR="email:8086" \
-    CHECKOUT_SERVICE_ADDR="checkout:8087" \
-    RECOMMENDATION_SERVICE_ADDR="recommendation:8088" \
-    AD_SERVICE_ADDR="ad:8089" \
+    PRODUCT_CATALOG_SERVICE_ADDR="productcatalog:11002" \
+    CURRENCY_SERVICE_ADDR="currency:11003" \
+    PAYMENT_SERVICE_ADDR="payment:11004" \
+    SHIPPING_SERVICE_ADDR="shipping:11005" \
+    EMAIL_SERVICE_ADDR="email:11006" \
+    CHECKOUT_SERVICE_ADDR="checkout:11007" \
+    RECOMMENDATION_SERVICE_ADDR="recommendation:11008" \
+    AD_SERVICE_ADDR="ad:11009" \
     SHOPPING_ASSISTANT_SERVICE_ADDR="shoppingassistant:80"

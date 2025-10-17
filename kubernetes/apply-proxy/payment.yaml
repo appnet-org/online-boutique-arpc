@@ -8,8 +8,8 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - port: 8084
-    targetPort: 8084
+  - port: 11004
+    targetPort: 11004
     name: arpc-payment
     protocol: UDP
   selector:
@@ -48,7 +48,7 @@ spec:
         - payment
         imagePullPolicy: Always
         ports:
-        - containerPort: 8084
+        - containerPort: 11004
         env:
         - name: LOG_LEVEL
           value: debug

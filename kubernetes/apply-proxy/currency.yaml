@@ -8,8 +8,8 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - port: 8083
-    targetPort: 8083
+  - port: 11003
+    targetPort: 11003
     name: arpc-currency
     protocol: UDP
   selector:
@@ -48,7 +48,7 @@ spec:
         - currency
         imagePullPolicy: Always
         ports:
-        - containerPort: 8083
+        - containerPort: 11003
         env:
         - name: LOG_LEVEL
           value: debug

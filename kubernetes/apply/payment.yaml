@@ -11,8 +11,8 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - port: 8084
-    targetPort: 8084
+  - port: 11004
+    targetPort: 11004
     name: arpc-payment
     protocol: UDP
   selector:
@@ -49,7 +49,7 @@ spec:
         args: ["payment"]
         imagePullPolicy: Always
         ports:
-        - containerPort: 8084
+        - containerPort: 11004
 ---
 # volume and persistent volume claim of `payment`
 apiVersion: v1

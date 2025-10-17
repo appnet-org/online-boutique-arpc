@@ -8,8 +8,8 @@ metadata:
 spec:
   clusterIP: None
   ports:
-  - port: 8088
-    targetPort: 8088
+  - port: 11008
+    targetPort: 11008
     name: arpc-recommendation
     protocol: UDP
   selector:
@@ -48,7 +48,7 @@ spec:
         - recommendation
         imagePullPolicy: Always
         ports:
-        - containerPort: 8088
+        - containerPort: 11008
         env:
         - name: LOG_LEVEL
           value: debug
