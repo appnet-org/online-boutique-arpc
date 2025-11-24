@@ -1,7 +1,9 @@
-capnproto.org/go/capnp/v3 v3.1.0-alpha.1 h1:8/sMnWuatR99G0L0vmnrXj0zVP0MrlyClRqSmqGYydo=
-capnproto.org/go/capnp/v3 v3.1.0-alpha.1/go.mod h1:2vT5D2dtG8sJGEoEKU17e+j7shdaYp1Myl8X03B3hmc=
-github.com/appnet-org/arpc v0.0.0-20251007162836-bbeaac30b81f h1:owBP0Kiv5hR3Ye4Hja2+lyYYvbwEgTM6SKcmxYLcRvQ=
-github.com/appnet-org/arpc v0.0.0-20251007162836-bbeaac30b81f/go.mod h1:UlPwzxJw2K8pCLd2pxirK4Hi+HbcXG2ruaf3XeRruno=
+capnproto.org/go/capnp/v3 v3.1.0-alpha.2 h1:93ISpqHf2/3WQlfrBP0tT8Dg/RQc3uq6DV36vN0ePWk=
+capnproto.org/go/capnp/v3 v3.1.0-alpha.2/go.mod h1:2vT5D2dtG8sJGEoEKU17e+j7shdaYp1Myl8X03B3hmc=
+github.com/appnet-org/arpc v0.0.0-20251112001035-cb1cd1218f1c h1:O0+9Wxsb5WHDEPoUdfzf2ndjNTnsDHBOyFiAyVKWcgk=
+github.com/appnet-org/arpc v0.0.0-20251112001035-cb1cd1218f1c/go.mod h1:PpbPEBIuY6FwqV/kIlMW94KSDm+SfCwPElTlKw6/qyY=
+github.com/appnet-org/arpc-tcp v0.0.0-20251124041051-7b1d3ffbb486 h1:HrS+Gdi1CWnH3j1etGP4ZiXCZKO34f5OrX/1T1g9qg4=
+github.com/appnet-org/arpc-tcp v0.0.0-20251124041051-7b1d3ffbb486/go.mod h1:IipgIAWArXS+ZFKysyWuKh6V+WxSripCCf4x2ubasr0=
 github.com/colega/zeropool v0.0.0-20230505084239-6fb4a4f75381 h1:d5EKgQfRQvO97jnISfR89AiCCCJMwMFoSxUiU0OGCRU=
 github.com/colega/zeropool v0.0.0-20230505084239-6fb4a4f75381/go.mod h1:OU76gHeRo8xrzGJU3F3I1CqX1ekM8dfJw0+wPeMwnp0=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

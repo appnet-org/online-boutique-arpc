@@ -14,7 +14,7 @@ spec:
   - port: 11008
     targetPort: 11008
     name: arpc-recommendation
-    protocol: UDP
+    protocol: TCP
   selector:
     app: recommendation
 ---

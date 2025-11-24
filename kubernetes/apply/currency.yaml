@@ -14,7 +14,7 @@ spec:
   - port: 11003
     targetPort: 11003
     name: arpc-currency
-    protocol: UDP
+    protocol: TCP
   selector:
     app: currency
 ---

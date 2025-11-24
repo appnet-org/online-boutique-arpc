@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/appnet-org/arpc/pkg/metadata"
-	"github.com/appnet-org/arpc/pkg/rpc/element"
+	"github.com/appnet-org/arpc-tcp/pkg/metadata"
+	"github.com/appnet-org/arpc-tcp/pkg/rpc/element"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 	jaegercfg "github.com/uber/jaeger-client-go/config"

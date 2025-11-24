@@ -14,7 +14,7 @@ spec:
   - port: 11004
     targetPort: 11004
     name: arpc-payment
-    protocol: UDP
+    protocol: TCP
   selector:
     app: payment
 ---

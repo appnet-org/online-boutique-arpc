@@ -14,7 +14,7 @@ spec:
   - port: 11001
     targetPort: 11001
     name: arpc-cart
-    protocol: UDP
+    protocol: TCP
   selector:
     app: cart
 ---

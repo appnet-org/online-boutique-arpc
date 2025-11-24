@@ -10,13 +10,13 @@ YAML_DIR="kubernetes/apply"
 UPDATE_ARPC="1"  # Set to "1" to update aRPC dependency to latest main, "0" to use pinned version
 # ---
 
-# Optionally refresh the aRPC dependency before building
+# Optionally refresh the aRPC-TCP dependency before building
 if [ "$UPDATE_ARPC" = "1" ]; then
-  echo "Updating aRPC dependency to latest main..."
-  go get github.com/appnet-org/arpc@main
+  echo "Updating aRPC-TCP dependency to latest arpc-tcp-with-element branch..."
+  go get -u github.com/appnet-org/arpc-tcp@arpc-tcp-with-element
   go mod tidy
 else
-  echo "Using pinned aRPC version from go.mod"
+  echo "Using pinned aRPC-TCP version from go.mod"
 fi
 
 # 1. Update Kubernetes YAML files to use the new image
@@ -29,10 +29,8 @@ rm -f $YAML_DIR/*.yaml.bak
 
 # 2. Build the Docker image
 echo "Building Docker image: $NEW_IMAGE"
-sudo docker build -t "$NEW_IMAGE" -f Dockerfile .
+sudo docker build --no-cache -t "$NEW_IMAGE" -f Dockerfile .
 
 # 3. Push the Docker image
 echo "Pushing Docker image: $NEW_IMAGE"
 sudo docker push "$NEW_IMAGE"
-
-echo "✅ Process complete."

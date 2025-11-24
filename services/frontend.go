@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/appnet-org/arpc/pkg/logging"
-	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc-tcp/pkg/logging"
+	"github.com/appnet-org/arpc-tcp/pkg/rpc"
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
 	"github.com/appnetorg/online-boutique-arpc/services/validator"
 	"github.com/opentracing/opentracing-go"

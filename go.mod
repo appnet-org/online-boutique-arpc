@@ -6,10 +6,8 @@ replace github.com/appnetorg/online-boutique-arpc/services => ./services
 
 replace github.com/appnetorg/online-boutique-arpc/proto => ./proto
 
-replace github.com/appnet-org/arpc/ => ./arpc-tcp
-
 require (
-	github.com/appnet-org/arpc v0.0.0-20251014033052-bf757f22f6a2
+	github.com/appnet-org/arpc-tcp v0.0.0-20251124041051-7b1d3ffbb486
 	github.com/appnetorg/online-boutique-arpc/proto v0.0.0-00010101000000-000000000000
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/google/uuid v1.6.0
@@ -22,8 +20,9 @@ require (
 )
 
 require (
-	capnproto.org/go/capnp/v3 v3.1.0-alpha.1 // indirect
+	capnproto.org/go/capnp/v3 v3.1.0-alpha.2 // indirect
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
+	github.com/appnet-org/arpc v0.0.0-20251112001035-cb1cd1218f1c // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/colega/zeropool v0.0.0-20230505084239-6fb4a4f75381 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
@@ -38,7 +37,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251007200510-49b9836ed3ff // indirect
 )

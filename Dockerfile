@@ -9,14 +9,21 @@ COPY go.mod go.sum ./
 # Copy proto directory since it's referenced in go.mod replace directive
 COPY proto/ proto/
 
-# Download and cache Go dependencies
+# Download and cache Go dependencies (including arpc-tcp from GitHub)
 RUN go mod download
+
+# Verify that arpc-tcp module is available
+RUN echo "Verifying arpc-tcp module..." && \
+    go list -m github.com/appnet-org/arpc-tcp && \
+    echo "✓ arpc-tcp module verified"
 
 # Copy the entire project directory to the container
 COPY . .
 
 # Build the Go application with optimized flags
-RUN go build -ldflags="-s -w" -o /app/onlineboutique ./cmd/...
+# Add build timestamp to force rebuild when code changes
+RUN echo "Building at $(date)" && \
+    go build -ldflags="-s -w" -o /app/onlineboutique ./cmd/...
 
 # Final stage
 FROM alpine:latest

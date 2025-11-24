@@ -14,7 +14,7 @@ spec:
   - port: 11005
     targetPort: 11005
     name: arpc-shipping
-    protocol: UDP
+    protocol: TCP
   selector:
     app: shipping
 ---

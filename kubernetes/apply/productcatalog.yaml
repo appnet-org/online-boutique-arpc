@@ -14,7 +14,7 @@ spec:
   - port: 11002
     targetPort: 11002
     name: arpc-productcatalog
-    protocol: UDP
+    protocol: TCP
   selector:
     app: productcatalog
 ---

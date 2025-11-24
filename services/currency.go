@@ -9,10 +9,10 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/appnet-org/arpc/pkg/logging"
-	"github.com/appnet-org/arpc/pkg/rpc"
-	"github.com/appnet-org/arpc/pkg/rpc/element"
-	"github.com/appnet-org/arpc/pkg/serializer"
+	"github.com/appnet-org/arpc-tcp/pkg/logging"
+	"github.com/appnet-org/arpc-tcp/pkg/rpc"
+	"github.com/appnet-org/arpc-tcp/pkg/rpc/element"
+	"github.com/appnet-org/arpc-tcp/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
 	"github.com/appnetorg/online-boutique-arpc/services/tracing"

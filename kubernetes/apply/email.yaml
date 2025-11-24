@@ -14,7 +14,7 @@ spec:
   - port: 11006
     targetPort: 11006
     name: arpc-email
-    protocol: UDP
+    protocol: TCP
   selector:
     app: email
 ---

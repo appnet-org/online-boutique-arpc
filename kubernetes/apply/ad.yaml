@@ -14,7 +14,7 @@ spec:
   - port: 11009
     targetPort: 11009
     name: arpc-ad
-    protocol: UDP
+    protocol: TCP
   selector:
     app: ad
 ---

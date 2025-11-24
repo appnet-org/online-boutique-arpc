@@ -14,7 +14,7 @@ spec:
   - port: 11007
     targetPort: 11007
     name: arpc-checkout
-    protocol: UDP
+    protocol: TCP
   selector:
     app: checkout
 ---
