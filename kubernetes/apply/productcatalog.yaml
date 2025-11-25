@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-productcatalog
       containers:
       - name: productcatalog
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-tcp:latest
         command: ["/app/onlineboutique"]
         args: ["productcatalog"]
         imagePullPolicy: Always
