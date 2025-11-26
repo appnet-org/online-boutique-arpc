@@ -7,13 +7,13 @@ USER="appnetorg"
 TAG="latest"
 IMAGE="onlineboutique-arpc"
 YAML_DIR="kubernetes/apply"
-UPDATE_ARPC="0"  # Set to "1" to update aRPC dependency to latest main, "0" to use pinned version
+UPDATE_ARPC="1"  # Set to "1" to update aRPC dependency to latest main, "0" to use pinned version
 # ---
 
 # Optionally refresh the aRPC dependency before building
 if [ "$UPDATE_ARPC" = "1" ]; then
   echo "Updating aRPC dependency to latest main..."
-  go get github.com/appnet-org/arpc@main
+  go get -u github.com/appnet-org/arpc@main
   go mod tidy
 else
   echo "Using pinned aRPC version from go.mod"

@@ -47,7 +47,8 @@ func mustConnARPC(client **rpc.Client, addr string) {
 	clientElements := []element.RPCElement{tracing.NewClientTracingElement()}
 
 	var err error
-	*client, err = rpc.NewClient(serializer, addr, clientElements)
+	// Use 0.0.0.0:0 to explicitly bind to IPv4 instead of :0 which defaults to IPv6
+	*client, err = rpc.NewClientWithLocalAddr(serializer, addr, "0.0.0.0:0", clientElements)
 	if err != nil {
 		panic(errors.Wrapf(err, "arpc: failed to connect %s", addr))
 	}
