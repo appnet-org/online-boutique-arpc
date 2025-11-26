@@ -121,6 +121,8 @@ func (s *ProductCatalogService) Run() error {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
 
+	defer setupServerReliableCC(server)()
+
 	pb.RegisterProductCatalogServiceServer(server, s)
 	log.Printf("ProductCatalogService running at port: %d", s.port)
 	server.Start()

@@ -9,11 +9,11 @@ import (
 	"github.com/appnet-org/arpc/pkg/logging"
 	"github.com/appnet-org/arpc/pkg/rpc"
 	"github.com/appnet-org/arpc/pkg/rpc/element"
+	"github.com/appnet-org/arpc/pkg/serializer"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/appnet-org/arpc/pkg/serializer"
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
 	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 	"github.com/google/uuid"
@@ -89,6 +89,8 @@ func (cs *CheckoutService) Run() error {
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
+
+	defer setupServerReliableCC(server)()
 
 	pb.RegisterCheckoutServiceServer(server, cs)
 	log.Printf("CheckoutService running at port: %d", cs.port)

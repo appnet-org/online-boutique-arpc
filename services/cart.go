@@ -52,6 +52,8 @@ func (s *CartService) Run() error {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
 
+	defer setupServerReliableCC(server)()
+
 	pb.RegisterCartServiceServer(server, s)
 	log.Printf("CartService running at port: %d", s.port)
 	server.Start()

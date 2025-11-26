@@ -45,6 +45,8 @@ func (s *ShippingService) Run() error {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
 
+	defer setupServerReliableCC(server)()
+
 	pb.RegisterShippingServiceServer(server, s)
 	log.Printf("ShippingService running at port: %d", s.port)
 	server.Start()

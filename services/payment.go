@@ -99,6 +99,8 @@ func (s *PaymentService) Run() error {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
 
+	defer setupServerReliableCC(server)()
+
 	pb.RegisterPaymentServiceServer(server, s)
 	log.Printf("PaymentService running at port: %d", s.port)
 	server.Start()

@@ -5,7 +5,7 @@ set -e
 # --- Configuration ---
 USER="appnetorg"
 TAG="latest"
-IMAGE="onlineboutique-arpc"
+IMAGE="onlineboutique-arpc-reliable-cc"
 YAML_DIR="kubernetes/apply"
 UPDATE_ARPC="1"  # Set to "1" to update aRPC dependency to latest main, "0" to use pinned version
 # ---

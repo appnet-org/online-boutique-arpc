@@ -48,6 +48,8 @@ func (s *AdService) Run() error {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
 
+	defer setupServerReliableCC(server)()
+
 	pb.RegisterAdServiceServer(server, s)
 	log.Printf("AdService running at port: %d", s.port)
 	server.Start()
