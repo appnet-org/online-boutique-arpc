@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-recommendation
       containers:
       - name: recommendation
-        image: appnetorg/onlineboutique-arpc-reliable-cc:latest
+        image: appnetorg/onlineboutique-arpc-reliable-cc-fc:latest
         command: ["/app/onlineboutique"]
         args: ["recommendation"]
         imagePullPolicy: Always
