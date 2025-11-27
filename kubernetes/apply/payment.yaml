@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-payment
       containers:
       - name: payment
-        image: appnetorg/onlineboutique-arpc-reliable-cc-fc:latest
+        image: appnetorg/onlineboutique-arpc-reliable:latest
         command: ["/app/onlineboutique"]
         args: ["payment"]
         imagePullPolicy: Always

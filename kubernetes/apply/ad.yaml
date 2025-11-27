@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-ad
       containers:
       - name: ad
-        image: appnetorg/onlineboutique-arpc-reliable-cc-fc:latest
+        image: appnetorg/onlineboutique-arpc-reliable:latest
         command: ["/app/onlineboutique"]
         args: ["ad"]
         imagePullPolicy: Always
