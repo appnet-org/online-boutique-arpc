@@ -9,7 +9,7 @@ COPY go.mod go.sum ./
 # Copy proto directory since it's referenced in go.mod replace directive
 COPY proto/ proto/
 # Copy arpc-quic dependency (referenced by replace directive)
-COPY arpc-quic/ arpc-quic/
+# COPY arpc-quic/ arpc-quic/
 
 # Download and cache Go dependencies
 RUN go mod download
