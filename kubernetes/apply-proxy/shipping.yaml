@@ -41,7 +41,7 @@ spec:
       serviceAccountName: onlineboutique-shipping
       containers:
       - name: shipping
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-quic:latest
         command:
         - /app/onlineboutique
         args:

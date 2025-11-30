@@ -41,7 +41,7 @@ spec:
       serviceAccountName: onlineboutique-ad
       containers:
       - name: ad
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-quic:latest
         command:
         - /app/onlineboutique
         args:

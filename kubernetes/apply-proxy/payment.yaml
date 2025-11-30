@@ -41,7 +41,7 @@ spec:
       serviceAccountName: onlineboutique-payment
       containers:
       - name: payment
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-quic:latest
         command:
         - /app/onlineboutique
         args:

@@ -3,8 +3,8 @@ package onlineboutique
 
 import (
 	"context"
-	"github.com/appnet-org/arpc/pkg/rpc"
-	"github.com/appnet-org/arpc/pkg/rpc/element"
+	"github.com/appnet-org/arpc-quic/pkg/rpc"
+	"github.com/appnet-org/arpc-quic/pkg/rpc/element"
 )
 
 // CartServiceClient is the client API for CartService service.

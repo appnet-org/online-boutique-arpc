@@ -8,6 +8,8 @@ WORKDIR /app
 COPY go.mod go.sum ./
 # Copy proto directory since it's referenced in go.mod replace directive
 COPY proto/ proto/
+# Copy arpc-quic dependency (referenced by replace directive)
+COPY arpc-quic/ arpc-quic/
 
 # Download and cache Go dependencies
 RUN go mod download
@@ -28,10 +30,10 @@ WORKDIR /app
 
 # Copy the built binary from the builder stage
 COPY --from=builder /app/onlineboutique .
-COPY services/templates /app/templates
-COPY services/static /app/static
-COPY services/data /app/data
-COPY services/tracing /app/tracing
+COPY --from=builder /app/services/templates /app/templates
+COPY --from=builder /app/services/static /app/static
+COPY --from=builder /app/services/data /app/data
+COPY --from=builder /app/services/tracing /app/tracing
 
 RUN chmod +x /app/onlineboutique
 

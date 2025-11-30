@@ -41,7 +41,7 @@ spec:
       serviceAccountName: onlineboutique-currency
       containers:
       - name: currency
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-quic:latest
         command:
         - /app/onlineboutique
         args:

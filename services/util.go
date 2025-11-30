@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/appnet-org/arpc/pkg/logging"
-	"github.com/appnet-org/arpc/pkg/rpc"
-	"github.com/appnet-org/arpc/pkg/rpc/element"
-	"github.com/appnet-org/arpc/pkg/serializer"
+	"github.com/appnet-org/arpc-quic/pkg/logging"
+	"github.com/appnet-org/arpc-quic/pkg/rpc"
+	"github.com/appnet-org/arpc-quic/pkg/rpc/element"
+	"github.com/appnet-org/arpc-quic/pkg/serializer"
 	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 	"github.com/pkg/errors"
 )
