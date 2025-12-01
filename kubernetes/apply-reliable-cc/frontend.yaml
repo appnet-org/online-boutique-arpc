@@ -42,7 +42,7 @@ spec:
       serviceAccountName: onlineboutique-frontend
       containers:
       - name: frontend
-        image: appnetorg/onlineboutique-arpc-varints:latest
+        image: appnetorg/onlineboutique-arpc-variants:latest
         command: ["/app/onlineboutique"]
         args: ["frontend"]
         env:

@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-checkout
       containers:
       - name: checkout
-        image: appnetorg/onlineboutique-arpc-varints:latest
+        image: appnetorg/onlineboutique-arpc-variants:latest
         command: ["/app/onlineboutique"]
         args: ["checkout"]
         env:
