@@ -60,7 +60,7 @@ func (s *CurrencyService) Run() error {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
 
-	defer setupServerReliableCC(server)()
+	defer setupServer(server)()
 
 	pb.RegisterCurrencyServiceServer(server, s)
 	log.Printf("CurrencyService running at port: %d", s.port)

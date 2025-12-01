@@ -1,0 +1,88 @@
+##################################################################################################
+# recommendation service and deployment
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: recommendation
+  labels:
+    app: recommendation
+    service: recommendation
+spec:
+  clusterIP: None
+  ports:
+  - port: 11008
+    targetPort: 11008
+    name: arpc-recommendation
+    protocol: UDP
+  selector:
+    app: recommendation
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onlineboutique-recommendation
+  labels:
+    account: recommendation
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recommendation
+  labels:
+    app: recommendation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: recommendation
+  template:
+    metadata:
+      labels:
+        app: recommendation
+    spec:
+      serviceAccountName: onlineboutique-recommendation
+      containers:
+      - name: recommendation
+        image: appnetorg/onlineboutique-arpc-varints:latest
+        command: ["/app/onlineboutique"]
+        args: ["recommendation"]
+        env:
+        - name: ENABLE_RELIABLE
+          value: "true"
+        - name: ENABLE_CC
+          value: "true"
+        - name: ENABLE_FC
+          value: "true"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 11008
+---
+# volume and persistent volume claim of `recommendation`
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: recommendation-pv
+spec:
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  storageClassName: recommendation-storage
+  hostPath:
+    path: /data/volumes/recommendation-pv   # Where all the hard drives are mounted
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: recommendation-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: recommendation-storage
+  resources:
+    requests:
+      storage: 1Gi
+---

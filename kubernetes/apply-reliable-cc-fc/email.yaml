@@ -1,0 +1,88 @@
+##################################################################################################
+# email service and deployment
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: email
+  labels:
+    app: email
+    service: email
+spec:
+  clusterIP: None
+  ports:
+  - port: 11006
+    targetPort: 11006
+    name: arpc-email
+    protocol: UDP
+  selector:
+    app: email
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onlineboutique-email
+  labels:
+    account: email
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email
+  labels:
+    app: email
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: email
+  template:
+    metadata:
+      labels:
+        app: email
+    spec:
+      serviceAccountName: onlineboutique-email
+      containers:
+      - name: email
+        image: appnetorg/onlineboutique-arpc-varints:latest
+        command: ["/app/onlineboutique"]
+        args: ["email"]
+        env:
+        - name: ENABLE_RELIABLE
+          value: "true"
+        - name: ENABLE_CC
+          value: "true"
+        - name: ENABLE_FC
+          value: "true"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 11006
+---
+# volume and persistent volume claim of `email`
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: email-pv
+spec:
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  storageClassName: email-storage
+  hostPath:
+    path: /data/volumes/email-pv   # Where all the hard drives are mounted
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: email-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: email-storage
+  resources:
+    requests:
+      storage: 1Gi
+---

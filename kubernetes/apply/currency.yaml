@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-currency
       containers:
       - name: currency
-        image: appnetorg/onlineboutique-arpc-reliable-cc-fc:latest
+        image: appnetorg/onlineboutique-arpc-varints:latest
         command: ["/app/onlineboutique"]
         args: ["currency"]
         imagePullPolicy: Always

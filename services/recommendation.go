@@ -50,7 +50,7 @@ func (s *RecommendationService) Run() error {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
 
-	defer setupServerReliableCC(server)()
+	defer setupServer(server)()
 
 	pb.RegisterRecommendationServiceServer(server, s)
 	log.Printf("RecommendationService running at port: %d", s.port)

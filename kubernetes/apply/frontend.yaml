@@ -42,7 +42,7 @@ spec:
       serviceAccountName: onlineboutique-frontend
       containers:
       - name: frontend
-        image: appnetorg/onlineboutique-arpc-reliable-cc-fc:latest
+        image: appnetorg/onlineboutique-arpc-varints:latest
         command: ["/app/onlineboutique"]
         args: ["frontend"]
         imagePullPolicy: Always

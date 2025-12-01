@@ -90,7 +90,7 @@ func (cs *CheckoutService) Run() error {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
 
-	defer setupServerReliableCC(server)()
+	defer setupServer(server)()
 
 	pb.RegisterCheckoutServiceServer(server, cs)
 	log.Printf("CheckoutService running at port: %d", cs.port)

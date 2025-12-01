@@ -1,0 +1,88 @@
+##################################################################################################
+# currency service and deployment
+##################################################################################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: currency
+  labels:
+    app: currency
+    service: currency
+spec:
+  clusterIP: None
+  ports:
+  - port: 11003
+    targetPort: 11003
+    name: arpc-currency
+    protocol: UDP
+  selector:
+    app: currency
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: onlineboutique-currency
+  labels:
+    account: currency
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: currency
+  labels:
+    app: currency
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: currency
+  template:
+    metadata:
+      labels:
+        app: currency
+    spec:
+      serviceAccountName: onlineboutique-currency
+      containers:
+      - name: currency
+        image: appnetorg/onlineboutique-arpc-varints:latest
+        command: ["/app/onlineboutique"]
+        args: ["currency"]
+        env:
+        - name: ENABLE_RELIABLE
+          value: "true"
+        - name: ENABLE_CC
+          value: "false"
+        - name: ENABLE_FC
+          value: "false"
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 11003
+---
+# volume and persistent volume claim of `currency`
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: currency-pv
+spec:
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  storageClassName: currency-storage
+  hostPath:
+    path: /data/volumes/currency-pv   # Where all the hard drives are mounted
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: currency-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: currency-storage
+  resources:
+    requests:
+      storage: 1Gi
+---

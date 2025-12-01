@@ -52,7 +52,7 @@ func (s *EmailService) Run() error {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
 
-	defer setupServerReliableCC(server)()
+	defer setupServer(server)()
 
 	pb.RegisterEmailServiceServer(server, s)
 	log.Printf("EmailService running at port: %d", s.port)

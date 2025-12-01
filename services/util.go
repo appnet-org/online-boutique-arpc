@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/appnet-org/arpc/pkg/custom/congestion"
 	"github.com/appnet-org/arpc/pkg/custom/flowcontrol"
@@ -44,9 +46,63 @@ func mustMapEnv(target *string, envKey string) {
 	*target = v
 }
 
-// mustConnARPC creates an aRPC client with tracing, reliable delivery, and congestion control
+// parseEnvBool parses an environment variable as a boolean
+// Supports: "true", "1", "yes", "on" (case-insensitive) -> true
+//
+//	"false", "0", "no", "off" (case-insensitive) -> false
+//
+// Returns defaultValue if the variable is not set or invalid
+func parseEnvBool(envKey string, defaultValue bool) bool {
+	enableStr := os.Getenv(envKey)
+	if enableStr == "" {
+		return defaultValue
+	}
+
+	// Parse the value - support "true", "1", "yes", "on" (case-insensitive)
+	enableStr = strings.ToLower(strings.TrimSpace(enableStr))
+	if enableStr == "true" || enableStr == "1" || enableStr == "yes" || enableStr == "on" {
+		return true
+	}
+	if enableStr == "false" || enableStr == "0" || enableStr == "no" || enableStr == "off" {
+		return false
+	}
+
+	// Try parsing as boolean
+	enabled, err := strconv.ParseBool(enableStr)
+	if err != nil {
+		log.Printf("Warning: Invalid value for %s: %q, defaulting to %v", envKey, enableStr, defaultValue)
+		return defaultValue
+	}
+	return enabled
+}
+
+// isReliableEnabled checks if reliable delivery feature should be enabled
+// It reads the ENABLE_RELIABLE environment variable (defaults to true if not set)
+func isReliableEnabled() bool {
+	return parseEnvBool("ENABLE_RELIABLE", true)
+}
+
+// isCCEnabled checks if congestion control feature should be enabled
+// It reads the ENABLE_CC environment variable (defaults to true if not set)
+func isCCEnabled() bool {
+	return parseEnvBool("ENABLE_CC", true)
+}
+
+// isFCEnabled checks if flow control feature should be enabled
+// It reads the ENABLE_FC environment variable (defaults to true if not set)
+func isFCEnabled() bool {
+	return parseEnvBool("ENABLE_FC", true)
+}
+
+// mustConnARPC creates an aRPC client with optional reliable delivery, congestion control, and flow control
+// Features are controlled by ENABLE_RELIABLE, ENABLE_CC, and ENABLE_FC environment variables (all default to true)
 func mustConnARPC(client **rpc.Client, addr string) {
-	log.Printf("Attempting to connect to aRPC server at: %s", addr)
+	enableReliable := isReliableEnabled()
+	enableCC := isCCEnabled()
+	enableFC := isFCEnabled()
+
+	log.Printf("Attempting to connect to aRPC server at: %s (reliable=%v, CC=%v, FC=%v)",
+		addr, enableReliable, enableCC, enableFC)
 
 	serializer := &serializer.SymphonySerializer{}
 	clientElements := []element.RPCElement{tracing.NewClientTracingElement()}
@@ -58,46 +114,65 @@ func mustConnARPC(client **rpc.Client, addr string) {
 		panic(errors.Wrapf(err, "arpc: failed to connect %s", addr))
 	}
 
+	// If no features are enabled, return basic client
+	if !enableReliable && !enableCC && !enableFC {
+		*client = c
+		return
+	}
+
 	// Get UDP transport from the client
 	udpTransport := c.Transport()
 
-	// Register packet types for reliable delivery and congestion control
-	ackPacketType, err := udpTransport.RegisterPacketType(
-		reliable.AckPacketName,
-		&reliable.ACKPacketCodec{})
-	if err != nil {
-		panic(errors.Wrap(err, "failed to register ACK packet type"))
+	// Variables to hold handlers and packet types
+	var reliableHandler *reliable.ReliableClientHandler
+	var ccHandler *congestion.CCClientHandler
+	var fcHandler *flowcontrol.FCClientHandler
+	var ackPacketType packet.PacketType
+	var ccFeedbackPacketType packet.PacketType
+	var fcFeedbackPacketType packet.PacketType
+
+	// Register packet types and create handlers based on enabled features
+	if enableReliable {
+		ackPacketType, err = udpTransport.RegisterPacketType(
+			reliable.AckPacketName,
+			&reliable.ACKPacketCodec{})
+		if err != nil {
+			panic(errors.Wrap(err, "failed to register ACK packet type"))
+		}
+
+		reliableHandler = reliable.NewReliableClientHandler(
+			udpTransport,
+			udpTransport.GetTimerManager(),
+		)
 	}
 
-	ccFeedbackPacketType, err := udpTransport.RegisterPacketType(
-		congestion.CCFeedbackPacketName,
-		&congestion.CCFeedbackCodec{})
-	if err != nil {
-		panic(errors.Wrap(err, "failed to register CCFeedback packet type"))
+	if enableCC {
+		ccFeedbackPacketType, err = udpTransport.RegisterPacketType(
+			congestion.CCFeedbackPacketName,
+			&congestion.CCFeedbackCodec{})
+		if err != nil {
+			panic(errors.Wrap(err, "failed to register CCFeedback packet type"))
+		}
+
+		ccHandler = congestion.NewCCClientHandler(
+			udpTransport,
+			udpTransport.GetTimerManager(),
+		)
 	}
 
-	fcFeedbackPacketType, err := udpTransport.RegisterPacketType(
-		flowcontrol.FCFeedbackPacketName,
-		&flowcontrol.FCFeedbackCodec{})
-	if err != nil {
-		panic(errors.Wrap(err, "failed to register FCFeedback packet type"))
+	if enableFC {
+		fcFeedbackPacketType, err = udpTransport.RegisterPacketType(
+			flowcontrol.FCFeedbackPacketName,
+			&flowcontrol.FCFeedbackCodec{})
+		if err != nil {
+			panic(errors.Wrap(err, "failed to register FCFeedback packet type"))
+		}
+
+		fcHandler = flowcontrol.NewFCClientHandler(
+			udpTransport,
+			udpTransport.GetTimerManager(),
+		)
 	}
-
-	// Create handlers for reliable delivery, congestion control, and flow control
-	reliableHandler := reliable.NewReliableClientHandler(
-		udpTransport,
-		udpTransport.GetTimerManager(),
-	)
-
-	ccHandler := congestion.NewCCClientHandler(
-		udpTransport,
-		udpTransport.GetTimerManager(),
-	)
-
-	fcHandler := flowcontrol.NewFCClientHandler(
-		udpTransport,
-		udpTransport.GetTimerManager(),
-	)
 
 	// Get existing handler chains for REQUEST packets (OnSend)
 	requestChain, exists := udpTransport.GetHandlerRegistry().GetHandlerChain(
@@ -107,10 +182,16 @@ func mustConnARPC(client **rpc.Client, addr string) {
 	if !exists {
 		panic("failed to get REQUEST handler chain")
 	}
-	// Add CC handler first (for congestion control), FC handler (for flow control), then reliable handler
-	requestChain.AddHandler(ccHandler)
-	requestChain.AddHandler(fcHandler)
-	requestChain.AddHandler(reliableHandler)
+	// Add handlers in order: CC, FC, then reliable
+	if enableCC && ccHandler != nil {
+		requestChain.AddHandler(ccHandler)
+	}
+	if enableFC && fcHandler != nil {
+		requestChain.AddHandler(fcHandler)
+	}
+	if enableReliable && reliableHandler != nil {
+		requestChain.AddHandler(reliableHandler)
+	}
 
 	// Get existing handler chains for RESPONSE packets (OnReceive)
 	responseChain, exists := udpTransport.GetHandlerRegistry().GetHandlerChain(
@@ -120,66 +201,103 @@ func mustConnARPC(client **rpc.Client, addr string) {
 	if !exists {
 		panic("failed to get RESPONSE handler chain")
 	}
-	// Add reliable handler first (for ACK), then CC handler (for feedback), then FC handler (for flow control feedback)
-	responseChain.AddHandler(reliableHandler)
-	responseChain.AddHandler(ccHandler)
-	responseChain.AddHandler(fcHandler)
+	// Add handlers in order: reliable, CC, then FC
+	if enableReliable && reliableHandler != nil {
+		responseChain.AddHandler(reliableHandler)
+	}
+	if enableCC && ccHandler != nil {
+		responseChain.AddHandler(ccHandler)
+	}
+	if enableFC && fcHandler != nil {
+		responseChain.AddHandler(fcHandler)
+	}
 
-	// Register dedicated handler chains for ACK, CCFeedback, and FCFeedback packets
-	ackChain := transport.NewHandlerChain("ClientACKHandlerChain", reliableHandler)
-	udpTransport.RegisterHandlerChain(ackPacketType.TypeID, ackChain, transport.RoleClient)
+	// Register dedicated handler chains for feedback packets
+	if enableReliable && reliableHandler != nil {
+		ackChain := transport.NewHandlerChain("ClientACKHandlerChain", reliableHandler)
+		udpTransport.RegisterHandlerChain(ackPacketType.TypeID, ackChain, transport.RoleClient)
+	}
 
-	ccFeedbackChain := transport.NewHandlerChain("ClientCCFeedbackHandlerChain", ccHandler)
-	udpTransport.RegisterHandlerChain(ccFeedbackPacketType.TypeID, ccFeedbackChain, transport.RoleClient)
+	if enableCC && ccHandler != nil {
+		ccFeedbackChain := transport.NewHandlerChain("ClientCCFeedbackHandlerChain", ccHandler)
+		udpTransport.RegisterHandlerChain(ccFeedbackPacketType.TypeID, ccFeedbackChain, transport.RoleClient)
+	}
 
-	fcFeedbackChain := transport.NewHandlerChain("ClientFCFeedbackHandlerChain", fcHandler)
-	udpTransport.RegisterHandlerChain(fcFeedbackPacketType.TypeID, fcFeedbackChain, transport.RoleClient)
+	if enableFC && fcHandler != nil {
+		fcFeedbackChain := transport.NewHandlerChain("ClientFCFeedbackHandlerChain", fcHandler)
+		udpTransport.RegisterHandlerChain(fcFeedbackPacketType.TypeID, fcFeedbackChain, transport.RoleClient)
+	}
 
 	*client = c
 }
 
-// setupServerReliableCC configures reliable delivery, congestion control, and flow control for an aRPC server
+// setupServer configures an aRPC server with optional reliable delivery, congestion control, and flow control
+// Features are controlled by ENABLE_RELIABLE, ENABLE_CC, and ENABLE_FC environment variables (all default to true)
 // This function must be called after rpc.NewServer() but before server.Start()
 // Returns a cleanup function that should be deferred
-func setupServerReliableCC(server *rpc.Server) func() {
+func setupServer(server *rpc.Server) func() {
+	enableReliable := isReliableEnabled()
+	enableCC := isCCEnabled()
+	enableFC := isFCEnabled()
+
+	log.Printf("Server configured with features: reliable=%v, CC=%v, FC=%v",
+		enableReliable, enableCC, enableFC)
+
+	// If no features are enabled, return no-op cleanup function
+	if !enableReliable && !enableCC && !enableFC {
+		return func() {}
+	}
+
 	// Get the UDP transport from the server
 	udpTransport := server.GetTransport()
 
-	// Register ACK packet type for reliable delivery
-	ackPacketType, err := udpTransport.RegisterPacketType(reliable.AckPacketName, &reliable.ACKPacketCodec{})
-	if err != nil {
-		log.Fatalf("Failed to register ACK packet type: %v", err)
+	// Variables to hold handlers and packet types
+	var reliableHandler *reliable.ReliableServerHandler
+	var ccHandler *congestion.CCServerHandler
+	var fcHandler *flowcontrol.FCServerHandler
+	var ackPacketType packet.PacketType
+	var ccFeedbackPacketType packet.PacketType
+	var fcFeedbackPacketType packet.PacketType
+
+	// Register packet types and create handlers based on enabled features
+	if enableReliable {
+		var err error
+		ackPacketType, err = udpTransport.RegisterPacketType(reliable.AckPacketName, &reliable.ACKPacketCodec{})
+		if err != nil {
+			log.Fatalf("Failed to register ACK packet type: %v", err)
+		}
+
+		reliableHandler = reliable.NewReliableServerHandler(
+			udpTransport,
+			udpTransport.GetTimerManager(),
+		)
 	}
 
-	// Register CCFeedback packet type for congestion control
-	ccFeedbackPacketType, err := udpTransport.RegisterPacketType(congestion.CCFeedbackPacketName, &congestion.CCFeedbackCodec{})
-	if err != nil {
-		log.Fatalf("Failed to register CCFeedback packet type: %v", err)
+	if enableCC {
+		var err error
+		ccFeedbackPacketType, err = udpTransport.RegisterPacketType(congestion.CCFeedbackPacketName, &congestion.CCFeedbackCodec{})
+		if err != nil {
+			log.Fatalf("Failed to register CCFeedback packet type: %v", err)
+		}
+
+		ccHandler = congestion.NewCCServerHandler(
+			udpTransport,
+			udpTransport.GetTimerManager(),
+		)
 	}
 
-	// Register FCFeedback packet type for flow control
-	fcFeedbackPacketType, err := udpTransport.RegisterPacketType(flowcontrol.FCFeedbackPacketName, &flowcontrol.FCFeedbackCodec{})
-	if err != nil {
-		log.Fatalf("Failed to register FCFeedback packet type: %v", err)
+	if enableFC {
+		var err error
+		fcFeedbackPacketType, err = udpTransport.RegisterPacketType(flowcontrol.FCFeedbackPacketName, &flowcontrol.FCFeedbackCodec{})
+		if err != nil {
+			log.Fatalf("Failed to register FCFeedback packet type: %v", err)
+		}
+
+		fcHandler = flowcontrol.NewFCServerHandler(
+			udpTransport,
+			udpTransport.GetTimerManager(),
+		)
 	}
-
-	// Create reliable server handler
-	reliableHandler := reliable.NewReliableServerHandler(
-		udpTransport,
-		udpTransport.GetTimerManager(),
-	)
-
-	// Create congestion control server handler
-	ccHandler := congestion.NewCCServerHandler(
-		udpTransport,
-		udpTransport.GetTimerManager(),
-	)
-
-	// Create flow control server handler
-	fcHandler := flowcontrol.NewFCServerHandler(
-		udpTransport,
-		udpTransport.GetTimerManager(),
-	)
 
 	// Get handler chains for REQUEST packets (OnReceive)
 	requestChain, exists := udpTransport.GetHandlerRegistry().GetHandlerChain(
@@ -189,10 +307,16 @@ func setupServerReliableCC(server *rpc.Server) func() {
 	if !exists {
 		log.Fatal("Failed to get REQUEST handler chain")
 	}
-	// Add reliable handler first (for ACK), then CC handler (for congestion feedback), then FC handler (for flow control feedback)
-	requestChain.AddHandler(reliableHandler)
-	requestChain.AddHandler(ccHandler)
-	requestChain.AddHandler(fcHandler)
+	// Add handlers in order: reliable, CC, then FC
+	if enableReliable && reliableHandler != nil {
+		requestChain.AddHandler(reliableHandler)
+	}
+	if enableCC && ccHandler != nil {
+		requestChain.AddHandler(ccHandler)
+	}
+	if enableFC && fcHandler != nil {
+		requestChain.AddHandler(fcHandler)
+	}
 
 	// Get handler chains for RESPONSE packets (OnSend)
 	responseChain, exists := udpTransport.GetHandlerRegistry().GetHandlerChain(
@@ -202,27 +326,43 @@ func setupServerReliableCC(server *rpc.Server) func() {
 	if !exists {
 		log.Fatal("Failed to get RESPONSE handler chain")
 	}
-	// Add CC handler first (for congestion control checks), FC handler (for flow control checks), then reliable handler
-	responseChain.AddHandler(ccHandler)
-	responseChain.AddHandler(fcHandler)
-	responseChain.AddHandler(reliableHandler)
+	// Add handlers in order: CC, FC, then reliable
+	if enableCC && ccHandler != nil {
+		responseChain.AddHandler(ccHandler)
+	}
+	if enableFC && fcHandler != nil {
+		responseChain.AddHandler(fcHandler)
+	}
+	if enableReliable && reliableHandler != nil {
+		responseChain.AddHandler(reliableHandler)
+	}
 
-	// Register handler chain for ACK packets
-	ackChain := transport.NewHandlerChain("ServerACKHandlerChain", reliableHandler)
-	udpTransport.RegisterHandlerChain(ackPacketType.TypeID, ackChain, transport.RoleServer)
+	// Register dedicated handler chains for feedback packets
+	if enableReliable && reliableHandler != nil {
+		ackChain := transport.NewHandlerChain("ServerACKHandlerChain", reliableHandler)
+		udpTransport.RegisterHandlerChain(ackPacketType.TypeID, ackChain, transport.RoleServer)
+	}
 
-	// Register handler chain for CCFeedback packets
-	ccFeedbackChain := transport.NewHandlerChain("ServerCCFeedbackHandlerChain", ccHandler)
-	udpTransport.RegisterHandlerChain(ccFeedbackPacketType.TypeID, ccFeedbackChain, transport.RoleServer)
+	if enableCC && ccHandler != nil {
+		ccFeedbackChain := transport.NewHandlerChain("ServerCCFeedbackHandlerChain", ccHandler)
+		udpTransport.RegisterHandlerChain(ccFeedbackPacketType.TypeID, ccFeedbackChain, transport.RoleServer)
+	}
 
-	// Register handler chain for FCFeedback packets
-	fcFeedbackChain := transport.NewHandlerChain("ServerFCFeedbackHandlerChain", fcHandler)
-	udpTransport.RegisterHandlerChain(fcFeedbackPacketType.TypeID, fcFeedbackChain, transport.RoleServer)
+	if enableFC && fcHandler != nil {
+		fcFeedbackChain := transport.NewHandlerChain("ServerFCFeedbackHandlerChain", fcHandler)
+		udpTransport.RegisterHandlerChain(fcFeedbackPacketType.TypeID, fcFeedbackChain, transport.RoleServer)
+	}
 
-	// Return cleanup function
+	// Return cleanup function that cleans up only the enabled handlers
 	return func() {
-		reliableHandler.Cleanup()
-		ccHandler.Cleanup()
-		fcHandler.Cleanup()
+		if enableReliable && reliableHandler != nil {
+			reliableHandler.Cleanup()
+		}
+		if enableCC && ccHandler != nil {
+			ccHandler.Cleanup()
+		}
+		if enableFC && fcHandler != nil {
+			fcHandler.Cleanup()
+		}
 	}
 }
