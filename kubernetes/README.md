@@ -8,6 +8,7 @@ The `generate_apply.sh` script creates deployment folders with custom environmen
 - **Reliable Delivery** (ENABLE_RELIABLE)
 - **Congestion Control** (ENABLE_CC)
 - **Flow Control** (ENABLE_FC)
+- **Encryption** (ENABLE_ENCRYPTION)
 
 ## Usage
 
@@ -24,6 +25,7 @@ The `generate_apply.sh` script creates deployment folders with custom environmen
 | `--reliable=true\|false` | Enable/disable reliable delivery | `true` |
 | `--cc=true\|false` | Enable/disable congestion control | `true` |
 | `--fc=true\|false` | Enable/disable flow control | `true` |
+| `--encryption=true\|false` | Enable/disable encryption | `false` |
 | `--output-dir=name` | Custom output directory name | Auto-generated |
 | `--help` | Show help message | - |
 

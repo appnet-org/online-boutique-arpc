@@ -1,14 +1,15 @@
 #!/bin/bash
 
 # Script to generate Kubernetes deployment folders with custom feature flags
-# Usage: ./generate_apply.sh [--reliable=true|false] [--cc=true|false] [--fc=true|false] [--output-dir=name]
+# Usage: ./generate_apply.sh [--reliable=true|false] [--cc=true|false] [--fc=true|false] [--encryption=true|false] [--output-dir=name]
 
 set -e
 
-# Default values (all features enabled)
+# Default values (all features enabled except encryption)
 ENABLE_RELIABLE="true"
 ENABLE_CC="true"
 ENABLE_FC="true"
+ENABLE_ENCRYPTION="false"
 OUTPUT_DIR=""
 
 # Parse command line arguments
@@ -26,17 +27,22 @@ for arg in "$@"; do
             ENABLE_FC="${arg#*=}"
             shift
             ;;
+        --encryption=*)
+            ENABLE_ENCRYPTION="${arg#*=}"
+            shift
+            ;;
         --output-dir=*)
             OUTPUT_DIR="${arg#*=}"
             shift
             ;;
         --help|-h)
-            echo "Usage: $0 [--reliable=true|false] [--cc=true|false] [--fc=true|false] [--output-dir=name]"
+            echo "Usage: $0 [--reliable=true|false] [--cc=true|false] [--fc=true|false] [--encryption=true|false] [--output-dir=name]"
             echo ""
             echo "Options:"
             echo "  --reliable=true|false   Enable/disable reliable delivery (default: true)"
             echo "  --cc=true|false         Enable/disable congestion control (default: true)"
             echo "  --fc=true|false         Enable/disable flow control (default: true)"
+            echo "  --encryption=true|false Enable/disable encryption (default: false)"
             echo "  --output-dir=name       Custom output directory name (default: auto-generated)"
             echo ""
             echo "Examples:"
@@ -66,6 +72,9 @@ if [ -z "$OUTPUT_DIR" ]; then
     if [ "$ENABLE_FC" = "true" ]; then
         features="${features}fc-"
     fi
+    if [ "$ENABLE_ENCRYPTION" = "true" ]; then
+        features="${features}encryption-"
+    fi
     
     if [ -z "$features" ]; then
         OUTPUT_DIR="apply-basic"
@@ -88,9 +97,10 @@ echo "Source directory: ${SOURCE_DIR}"
 echo "Target directory: ${TARGET_DIR}"
 echo ""
 echo "Feature flags:"
-echo "  ENABLE_RELIABLE: ${ENABLE_RELIABLE}"
-echo "  ENABLE_CC:       ${ENABLE_CC}"
-echo "  ENABLE_FC:       ${ENABLE_FC}"
+echo "  ENABLE_RELIABLE:   ${ENABLE_RELIABLE}"
+echo "  ENABLE_CC:         ${ENABLE_CC}"
+echo "  ENABLE_FC:         ${ENABLE_FC}"
+echo "  ENABLE_ENCRYPTION: ${ENABLE_ENCRYPTION}"
 echo "=========================================="
 echo ""
 
@@ -120,7 +130,7 @@ add_env_vars() {
     local output_file="$2"
     
     # Use awk to insert environment variables after the 'args:' line in Deployment resources
-    awk -v reliable="$ENABLE_RELIABLE" -v cc="$ENABLE_CC" -v fc="$ENABLE_FC" '
+    awk -v reliable="$ENABLE_RELIABLE" -v cc="$ENABLE_CC" -v fc="$ENABLE_FC" -v encryption="$ENABLE_ENCRYPTION" '
     /kind: Deployment/ { in_deployment=1 }
     /^---$/ { in_deployment=0 }
     /args:/ && in_deployment {
@@ -136,6 +146,8 @@ add_env_vars() {
         print indent "  value: \"" cc "\""
         print indent "- name: ENABLE_FC"
         print indent "  value: \"" fc "\""
+        print indent "- name: ENABLE_ENCRYPTION"
+        print indent "  value: \"" encryption "\""
         next
     }
     { print }

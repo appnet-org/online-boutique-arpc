@@ -3,7 +3,7 @@ module github.com/appnetorg/online-boutique-arpc/proto
 go 1.24.0
 
 require (
-	github.com/appnet-org/arpc v0.0.0-20251007162836-bbeaac30b81f
+	github.com/appnet-org/arpc v0.0.0-20260104064931-6883f2c64309
 	google.golang.org/protobuf v1.36.10
 )
 

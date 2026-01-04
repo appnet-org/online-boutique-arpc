@@ -94,15 +94,23 @@ func isFCEnabled() bool {
 	return parseEnvBool("ENABLE_FC", true)
 }
 
-// mustConnARPC creates an aRPC client with optional reliable delivery, congestion control, and flow control
-// Features are controlled by ENABLE_RELIABLE, ENABLE_CC, and ENABLE_FC environment variables (all default to true)
+// isEncryptionEnabled checks if encryption feature should be enabled
+// It reads the ENABLE_ENCRYPTION environment variable (defaults to false if not set)
+func isEncryptionEnabled() bool {
+	return parseEnvBool("ENABLE_ENCRYPTION", false)
+}
+
+// mustConnARPC creates an aRPC client with optional reliable delivery, congestion control, flow control, and encryption
+// Features are controlled by ENABLE_RELIABLE, ENABLE_CC, ENABLE_FC, and ENABLE_ENCRYPTION environment variables
+// (reliable/CC/FC default to true, encryption defaults to false)
 func mustConnARPC(client **rpc.Client, addr string) {
 	enableReliable := isReliableEnabled()
 	enableCC := isCCEnabled()
 	enableFC := isFCEnabled()
+	enableEncryption := isEncryptionEnabled()
 
-	log.Printf("Attempting to connect to aRPC server at: %s (reliable=%v, CC=%v, FC=%v)",
-		addr, enableReliable, enableCC, enableFC)
+	log.Printf("Attempting to connect to aRPC server at: %s (reliable=%v, CC=%v, FC=%v, encryption=%v)",
+		addr, enableReliable, enableCC, enableFC, enableEncryption)
 
 	serializer := &serializer.SymphonySerializer{}
 	clientElements := []element.RPCElement{tracing.NewClientTracingElement()}
@@ -114,14 +122,19 @@ func mustConnARPC(client **rpc.Client, addr string) {
 		panic(errors.Wrapf(err, "arpc: failed to connect %s", addr))
 	}
 
-	// If no features are enabled, return basic client
+	// Get UDP transport from the client
+	udpTransport := c.Transport()
+
+	// Enable encryption if requested (independent of other features)
+	if enableEncryption {
+		udpTransport.EnableEncryption()
+	}
+
+	// If no other features are enabled, return basic client
 	if !enableReliable && !enableCC && !enableFC {
 		*client = c
 		return
 	}
-
-	// Get UDP transport from the client
-	udpTransport := c.Transport()
 
 	// Variables to hold handlers and packet types
 	var reliableHandler *reliable.ReliableClientHandler
@@ -231,25 +244,32 @@ func mustConnARPC(client **rpc.Client, addr string) {
 	*client = c
 }
 
-// setupServer configures an aRPC server with optional reliable delivery, congestion control, and flow control
-// Features are controlled by ENABLE_RELIABLE, ENABLE_CC, and ENABLE_FC environment variables (all default to true)
+// setupServer configures an aRPC server with optional reliable delivery, congestion control, flow control, and encryption
+// Features are controlled by ENABLE_RELIABLE, ENABLE_CC, ENABLE_FC, and ENABLE_ENCRYPTION environment variables
+// (reliable/CC/FC default to true, encryption defaults to false)
 // This function must be called after rpc.NewServer() but before server.Start()
 // Returns a cleanup function that should be deferred
 func setupServer(server *rpc.Server) func() {
 	enableReliable := isReliableEnabled()
 	enableCC := isCCEnabled()
 	enableFC := isFCEnabled()
+	enableEncryption := isEncryptionEnabled()
 
-	log.Printf("Server configured with features: reliable=%v, CC=%v, FC=%v",
-		enableReliable, enableCC, enableFC)
-
-	// If no features are enabled, return no-op cleanup function
-	if !enableReliable && !enableCC && !enableFC {
-		return func() {}
-	}
+	log.Printf("Server configured with features: reliable=%v, CC=%v, FC=%v, encryption=%v",
+		enableReliable, enableCC, enableFC, enableEncryption)
 
 	// Get the UDP transport from the server
 	udpTransport := server.GetTransport()
+
+	// Enable encryption if requested (independent of other features)
+	if enableEncryption {
+		udpTransport.EnableEncryption()
+	}
+
+	// If no other features are enabled, return no-op cleanup function
+	if !enableReliable && !enableCC && !enableFC {
+		return func() {}
+	}
 
 	// Variables to hold handlers and packet types
 	var reliableHandler *reliable.ReliableServerHandler
