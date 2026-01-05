@@ -8,7 +8,7 @@ replace github.com/appnetorg/online-boutique-arpc/proto => ./proto
 
 require (
 	capnproto.org/go/capnp/v3 v3.1.0-alpha.1
-	github.com/appnet-org/arpc v0.0.0-20260104064931-6883f2c64309
+	github.com/appnet-org/arpc v0.0.0-20260105104942-ac7b303fbf7c
 	github.com/appnetorg/online-boutique-arpc/proto v0.0.0-00010101000000-000000000000
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/google/flatbuffers v25.12.19+incompatible

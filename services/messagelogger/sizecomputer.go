@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -15,7 +14,7 @@ type SerializationSizes struct {
 	Protobuf    int               `json:"protobuf"`
 	FlatBuffers int               `json:"flatbuffers"`
 	CapnProto   int               `json:"capnproto"`
-	ProtoJSON   int               `json:"protojson"`
+	Symphony    int               `json:"symphony"`
 	Errors      map[string]string `json:"errors,omitempty"`
 }
 
@@ -25,7 +24,7 @@ func ComputeSizes(msg interface{}) SerializationSizes {
 		Protobuf:    -1,
 		FlatBuffers: -1,
 		CapnProto:   -1,
-		ProtoJSON:   -1,
+		Symphony:    -1,
 		Errors:      make(map[string]string),
 	}
 
@@ -37,20 +36,11 @@ func ComputeSizes(msg interface{}) SerializationSizes {
 		} else {
 			sizes.Protobuf = len(data)
 		}
-
-		// Compute protojson size
-		jsonData, err := protojson.Marshal(protoMsg)
-		if err != nil {
-			sizes.Errors["protojson"] = err.Error()
-		} else {
-			sizes.ProtoJSON = len(jsonData)
-		}
 	} else {
 		sizes.Errors["protobuf"] = "not a proto message"
-		sizes.Errors["protojson"] = "not a proto message"
 	}
 
-	// Compute FlatBuffers and Cap'n Proto sizes based on message type
+	// Compute FlatBuffers, Cap'n Proto, and Symphony sizes based on message type
 	fbData, fbErr := convertToFlatBuffers(msg)
 	if fbErr != nil {
 		sizes.Errors["flatbuffers"] = fbErr.Error()
@@ -63,6 +53,13 @@ func ComputeSizes(msg interface{}) SerializationSizes {
 		sizes.Errors["capnproto"] = capnpErr.Error()
 	} else {
 		sizes.CapnProto = len(capnpData)
+	}
+
+	symphonyData, symphonyErr := convertToSymphony(msg)
+	if symphonyErr != nil {
+		sizes.Errors["symphony"] = symphonyErr.Error()
+	} else {
+		sizes.Symphony = len(symphonyData)
 	}
 
 	return sizes
@@ -218,6 +215,23 @@ func convertToCapnProto(msg interface{}) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("unsupported message type for Cap'n Proto conversion: %s", typeName)
 	}
+}
+
+// convertToSymphony converts a protobuf message to Symphony
+func convertToSymphony(msg interface{}) ([]byte, error) {
+	typeName := reflect.TypeOf(msg).String()
+
+	// Define interface for Symphony marshallable types
+	type symphonyMarshaller interface {
+		MarshalSymphony() ([]byte, error)
+	}
+
+	// Check if the message implements MarshalSymphony
+	if sm, ok := msg.(symphonyMarshaller); ok {
+		return sm.MarshalSymphony()
+	}
+
+	return nil, fmt.Errorf("unsupported message type for Symphony conversion: %s", typeName)
 }
 
 // GetMessageTypeName returns the type name of the message
