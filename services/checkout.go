@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/messagelogger"
 	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -84,7 +85,13 @@ func (cs *CheckoutService) Run() error {
 
 	// Create ARPC server
 	serializer := &serializer.SymphonySerializer{}
-	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
+
+	serverLogger, err := messagelogger.NewServerMessageLogger()
+	if err != nil {
+		log.Printf("Failed to create server message logger: %v", err)
+	}
+
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement(), serverLogger}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(cs.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)

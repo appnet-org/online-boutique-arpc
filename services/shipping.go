@@ -14,6 +14,7 @@ import (
 	"github.com/appnet-org/arpc/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
+	"github.com/appnetorg/online-boutique-arpc/services/messagelogger"
 	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 )
 
@@ -39,7 +40,13 @@ func (s *ShippingService) Run() error {
 	}
 
 	serializer := &serializer.SymphonySerializer{}
-	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
+
+	serverLogger, err := messagelogger.NewServerMessageLogger()
+	if err != nil {
+		log.Printf("Failed to create server message logger: %v", err)
+	}
+
+	rpcElements := []element.RPCElement{tracing.NewServerTracingElement(), serverLogger}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)

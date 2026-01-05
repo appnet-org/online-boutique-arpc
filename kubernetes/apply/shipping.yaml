@@ -44,12 +44,20 @@ spec:
       serviceAccountName: onlineboutique-shipping
       containers:
       - name: shipping
-        image: appnetorg/onlineboutique-arpc-variants:latest
+        image: appnetorg/onlineboutique-arpc-variants-logging:latest
         command: ["/app/onlineboutique"]
         args: ["shipping"]
         imagePullPolicy: Always
         ports:
         - containerPort: 11005
+        volumeMounts:
+        - name: message-logs
+          mountPath: /var/log/arpc-messages
+      volumes:
+      - name: message-logs
+        hostPath:
+          path: /users/aruj/online-boutique-arpc/logs
+          type: DirectoryOrCreate
 ---
 # volume and persistent volume claim of `shipping`
 apiVersion: v1

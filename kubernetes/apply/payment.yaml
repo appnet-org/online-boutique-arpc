@@ -44,12 +44,20 @@ spec:
       serviceAccountName: onlineboutique-payment
       containers:
       - name: payment
-        image: appnetorg/onlineboutique-arpc-variants:latest
+        image: appnetorg/onlineboutique-arpc-variants-logging:latest
         command: ["/app/onlineboutique"]
         args: ["payment"]
         imagePullPolicy: Always
         ports:
         - containerPort: 11004
+        volumeMounts:
+        - name: message-logs
+          mountPath: /var/log/arpc-messages
+      volumes:
+      - name: message-logs
+        hostPath:
+          path: /users/aruj/online-boutique-arpc/logs
+          type: DirectoryOrCreate
 ---
 # volume and persistent volume claim of `payment`
 apiVersion: v1

@@ -16,6 +16,7 @@ import (
 	"github.com/appnet-org/arpc/pkg/rpc/element"
 	"github.com/appnet-org/arpc/pkg/serializer"
 	"github.com/appnet-org/arpc/pkg/transport"
+	"github.com/appnetorg/online-boutique-arpc/services/messagelogger"
 	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 	"github.com/pkg/errors"
 )
@@ -113,7 +114,13 @@ func mustConnARPC(client **rpc.Client, addr string) {
 		addr, enableReliable, enableCC, enableFC, enableEncryption)
 
 	serializer := &serializer.SymphonySerializer{}
-	clientElements := []element.RPCElement{tracing.NewClientTracingElement()}
+
+	clientLogger, logErr := messagelogger.NewClientMessageLogger()
+	if logErr != nil {
+		log.Printf("Failed to create client message logger: %v", logErr)
+	}
+
+	clientElements := []element.RPCElement{tracing.NewClientTracingElement(), clientLogger}
 
 	var err error
 	// Use 0.0.0.0:0 to explicitly bind to IPv4 instead of :0 which defaults to IPv6

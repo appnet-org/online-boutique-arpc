@@ -1,0 +1,1 @@
+{"timestamp":"2026-01-05T06:00:35Z","direction":"response","message_type":"Money","sizes":{"protobuf":13,"flatbuffers":48,"capnproto":48,"protojson":53},"payload":{"currency_code":"CNY","units":60,"nanos":323257843}}

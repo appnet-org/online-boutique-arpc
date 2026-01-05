@@ -1,0 +1,1 @@
+{"timestamp":"2026-01-05T06:00:35Z","direction":"response","message_type":"GetQuoteResponse","sizes":{"protobuf":15,"flatbuffers":64,"capnproto":56,"protojson":64},"payload":{"cost_usd":{"currency_code":"USD","units":8,"nanos":990000000}}}

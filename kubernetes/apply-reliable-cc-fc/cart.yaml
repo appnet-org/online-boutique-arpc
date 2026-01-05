@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-cart
       containers:
       - name: cart
-        image: appnetorg/onlineboutique-arpc-variants:latest
+        image: appnetorg/onlineboutique-arpc-variants-logging:latest
         command: ["/app/onlineboutique"]
         args: ["cart"]
         env:

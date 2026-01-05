@@ -49,6 +49,14 @@ spec:
         imagePullPolicy: Always
         ports:
         - containerPort: 11007
+        volumeMounts:
+        - name: message-logs
+          mountPath: /var/log/arpc-messages
+      volumes:
+      - name: message-logs
+        hostPath:
+          path: /users/aruj/online-boutique-arpc/logs
+          type: DirectoryOrCreate
         env:
         - name: LOG_LEVEL
           value: info

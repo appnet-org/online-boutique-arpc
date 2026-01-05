@@ -7,9 +7,11 @@ replace github.com/appnetorg/online-boutique-arpc/services => ./services
 replace github.com/appnetorg/online-boutique-arpc/proto => ./proto
 
 require (
+	capnproto.org/go/capnp/v3 v3.1.0-alpha.1
 	github.com/appnet-org/arpc v0.0.0-20260104064931-6883f2c64309
 	github.com/appnetorg/online-boutique-arpc/proto v0.0.0-00010101000000-000000000000
 	github.com/go-playground/validator/v10 v10.28.0
+	github.com/google/flatbuffers v25.12.19+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/pkg/errors v0.9.1
@@ -20,7 +22,6 @@ require (
 )
 
 require (
-	capnproto.org/go/capnp/v3 v3.1.0-alpha.1 // indirect
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/colega/zeropool v0.0.0-20230505084239-6fb4a4f75381 // indirect

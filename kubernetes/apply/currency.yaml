@@ -44,12 +44,20 @@ spec:
       serviceAccountName: onlineboutique-currency
       containers:
       - name: currency
-        image: appnetorg/onlineboutique-arpc-variants:latest
+        image: appnetorg/onlineboutique-arpc-variants-logging:latest
         command: ["/app/onlineboutique"]
         args: ["currency"]
         imagePullPolicy: Always
         ports:
         - containerPort: 11003
+        volumeMounts:
+        - name: message-logs
+          mountPath: /var/log/arpc-messages
+      volumes:
+      - name: message-logs
+        hostPath:
+          path: /users/aruj/online-boutique-arpc/logs
+          type: DirectoryOrCreate
 ---
 # volume and persistent volume claim of `currency`
 apiVersion: v1
