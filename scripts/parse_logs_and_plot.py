@@ -75,13 +75,52 @@ def calculate_cdf(sizes):
     return sorted_sizes, cumulative_prob
 
 
-def main():
-    # Get the directory where this script is located
-    script_dir = Path(__file__).parent
-    logs_dir = script_dir / '../logs'
-    logs_dir = logs_dir.resolve()
+def extract_sizes_by_lib(messages, serialization_libs):
+    """Extract sizes for each serialization library from messages."""
+    sizes_by_lib = {}
+    skipped_count = 0
     
-    print(f"Parsing logs from: {logs_dir}")
+    for msg in messages:
+        sizes = msg.get('sizes', {})
+        
+        # Skip this message if any serialization library has size 0
+        skip_message = False
+        for lib in serialization_libs:
+            if lib in sizes and sizes[lib] == 0:
+                skip_message = True
+                break
+        
+        if skip_message:
+            skipped_count += 1
+            continue
+        
+        # Only add sizes if no library has 0 size
+        for lib in serialization_libs:
+            if lib in sizes:
+                if lib not in sizes_by_lib:
+                    sizes_by_lib[lib] = []
+                sizes_by_lib[lib].append(sizes[lib])
+    
+    if skipped_count > 0:
+        print(f"Messages skipped due to 0-size serialization: {skipped_count}")
+    
+    # Convert to numpy arrays for consistency with template
+    sizes_dict = {}
+    lib_labels = {'protobuf': 'Protobuf', 'flatbuffers': 'Flatbuffers', 
+                  'capnproto': 'Cap\'n Proto', 'symphony': 'fRPC'}
+    
+    for lib in serialization_libs:
+        if lib in sizes_by_lib and sizes_by_lib[lib]:
+            sizes_dict[lib_labels.get(lib, lib.capitalize())] = np.array(sizes_by_lib[lib])
+    
+    return sizes_dict
+
+
+def process_logs_directory(logs_dir, application_name):
+    """Process logs from a directory and return sizes by library."""
+    print(f"\n{'='*60}")
+    print(f"Processing {application_name} logs from: {logs_dir}")
+    print(f"{'='*60}")
     
     # Parse all log files
     messages = parse_logs(str(logs_dir))
@@ -89,8 +128,8 @@ def main():
     print(f"Total messages parsed: {total_messages}")
     
     if total_messages == 0:
-        print("No messages found. Exiting.")
-        return
+        print(f"No messages found for {application_name}. Using empty dataset.")
+        return {}
     
     # Deduplicate messages
     unique_messages, duplicates = deduplicate_messages(messages)
@@ -102,72 +141,131 @@ def main():
     
     # Extract sizes for each serialization library
     serialization_libs = ['protobuf', 'flatbuffers', 'capnproto', 'symphony']
-    sizes_by_lib = defaultdict(list)
+    sizes_dict = extract_sizes_by_lib(unique_messages, serialization_libs)
     
-    for msg in unique_messages:
-        sizes = msg.get('sizes', {})
-        for lib in serialization_libs:
-            if lib in sizes:
-                sizes_by_lib[lib].append(sizes[lib])
+    # Print statistics
+    for lib, sizes in sizes_dict.items():
+        if len(sizes) > 0:
+            print(f"{lib}: {len(sizes)} messages, min={np.min(sizes)}, "
+                  f"max={np.max(sizes)}, median={np.median(sizes):.0f}")
     
-    # Calculate CDFs
-    cdfs = {}
-    for lib in serialization_libs:
-        if lib in sizes_by_lib:
-            sizes, probs = calculate_cdf(sizes_by_lib[lib])
-            cdfs[lib] = (sizes, probs)
-            print(f"{lib}: {len(sizes)} messages, min={min(sizes) if sizes else 0}, "
-                  f"max={max(sizes) if sizes else 0}, "
-                  f"median={sorted(sizes)[len(sizes)//2] if sizes else 0}")
+    return sizes_dict
+
+
+def plot_merged_cdfs(data_left, data_right,
+                    #  x_labels=('Online Boutique\nMessage Size (bytes)', 
+                    #           'Hotel Reservation\nMessage Size (bytes)'),
+                    x_labels=('Online Boutique (bytes)', 
+                                'Hotel Reservation (bytes)'),
+                     output_filename="cdf_message_sizes.pdf",
+                     system_order=None):
+    """
+    Plots two CDFs side-by-side with shared legend at bottom.
+    Titles are removed; X-axis labels differentiate the plots.
+    """
     
-    # Plot CDFs
-    fig, ax = plt.subplots(1, 1, figsize=(4, 3))
+    # 1. Setup Figure (1 row, 2 columns)
+    fig, axes = plt.subplots(1, 2, figsize=(8, 3))
     
     # Standard SIGCOMM Color Palette & Styles
     colors = ['#6acc64', '#4878d0', '#82c6e2', '#e6a04e']
     linestyles = ['-', '--', '-.', ':']
     
-    # Map libraries to colors/linestyles
-    lib_order = ['protobuf', 'flatbuffers', 'capnproto', 'symphony']
-    lib_labels = {'protobuf': 'Protobuf', 'flatbuffers': 'Flatbuffers', 
-                  'capnproto': 'Cap\'n Proto', 'symphony': 'Symphony'}
+    # Default system order
+    if system_order is None:
+        system_order = ['Protobuf', 'Flatbuffers', 'Cap\'n Proto', 'fRPC']
     
-    for i, lib in enumerate(lib_order):
-        if lib in cdfs:
-            sizes, probs = cdfs[lib]
-            # Sizes and probs are already sorted from calculate_cdf
-            ax.plot(sizes, probs,
-                     label=lib_labels.get(lib, lib.capitalize()),
+    datasets = [data_left, data_right]
+    
+    # 2. Loop through both subplots
+    for idx, ax in enumerate(axes):
+        data_dict = datasets[idx]
+        
+        for i, system in enumerate(system_order):
+            if system not in data_dict:
+                continue
+            
+            sorted_data = np.sort(data_dict[system])
+            yvals = np.arange(1, len(sorted_data) + 1) / len(sorted_data)
+            
+            ax.plot(sorted_data, yvals,
+                     label=system,
                      color=colors[i % len(colors)],
                      linestyle=linestyles[i % len(linestyles)],
                      linewidth=2.5)
+        
+        # 3. Styling
+        ax.set_yticks([0, 0.25, 0.50, 0.75, 1.0])
+        ax.set_yticklabels(['0', '25', '50', '75', '100'])
+        
+        # Y-label only on the left plot
+        ax.set_ylabel('CDF (%)' if idx == 0 else "")
+        
+        # X-labels customized
+        ax.set_xlabel(x_labels[idx], fontsize=14)
+        
+        ax.set_xscale('log')
+        ax.grid(True, which="major", ls="-", alpha=0.3)
+        ax.set_ylim(0, 1)
     
-    # Styling
-    ax.set_yticks([0, 0.25, 0.50, 0.75, 1.0])
-    ax.set_yticklabels(['0', '25', '50', '75', '100'])
-    ax.set_ylabel('CDF (%)')
-    ax.set_xlabel('Message Size (bytes)', fontsize=14)
-    ax.set_xscale('log')
-    ax.grid(True, which="major", ls="-", alpha=0.3)
-    ax.set_ylim(0, 1)
+    # 4. Shared Legend at Bottom
+    handles, labels = axes[0].get_legend_handles_labels()
     
-    # Legend at bottom
-    handles, labels = ax.get_legend_handles_labels()
     fig.legend(handles, labels,
                loc='lower center',
-               bbox_to_anchor=(0.5, -0.15),
+               bbox_to_anchor=(0.5, -0.20),
                ncol=4,
                frameon=True,
                columnspacing=1.5)
     
-    # Save plot
-    output_file = script_dir / 'cdf_message_sizes.png'
+    # 5. Adjust Layout
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.25)
-    plt.savefig(output_file, bbox_inches='tight', dpi=300)
-    print(f"\nCDF plot saved to: {output_file}")
     
+    print(f"\nSaving merged plot to {output_filename}...")
+    plt.savefig(output_filename, bbox_inches='tight')
     plt.close()
+
+
+def main():
+    # Get the directory where this script is located
+    script_dir = Path(__file__).parent
+    
+    # Define log directories
+    boutique_logs_dir = script_dir / '../logs'
+    boutique_logs_dir = boutique_logs_dir.resolve()
+    
+    # Hotel reservation logs directory (using boutique as placeholder for now)
+    hotel_logs_dir = script_dir / '../hotel_logs'
+    hotel_logs_dir = hotel_logs_dir.resolve()
+    
+    # Check if hotel logs directory exists, if not use boutique as placeholder
+    if not hotel_logs_dir.exists():
+        print(f"Hotel reservation logs directory not found at {hotel_logs_dir}")
+        print("Using online boutique logs as placeholder for hotel reservation...")
+        hotel_logs_dir = boutique_logs_dir
+    
+    # Process both log directories
+    boutique_data = process_logs_directory(boutique_logs_dir, "Online Boutique")
+    hotel_data = process_logs_directory(hotel_logs_dir, "Hotel Reservation")
+    
+    # If hotel data is empty, use boutique data as placeholder
+    if not hotel_data:
+        print("\nUsing online boutique data as placeholder for hotel reservation...")
+        hotel_data = boutique_data.copy()
+    
+    # Define system order
+    system_order = ['Protobuf', 'Flatbuffers', 'Cap\'n Proto', 'fRPC']
+    
+    # Plot merged CDFs
+    output_file = script_dir / 'cdf_message_sizes.pdf'
+    plot_merged_cdfs(boutique_data, hotel_data,
+                     x_labels=('Online Boutique\nMessage Size (bytes)', 
+                              'Hotel Reservation\nMessage Size (bytes)'),
+                     output_filename=str(output_file),
+                     system_order=system_order)
+    
+    print(f"\nCDF plot saved to: {output_file}")
 
 
 if __name__ == '__main__':
