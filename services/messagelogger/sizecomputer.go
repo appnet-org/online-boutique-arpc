@@ -68,7 +68,12 @@ func ComputeSizes(msg interface{}) SerializationSizes {
 	if symphonyErr != nil {
 		sizes.Errors["symphony"] = symphonyErr.Error()
 	} else {
-		sizes.Symphony = len(symphonyData)
+		// Subtract 9 bytes because Symphony encodes extra information
+		symphonySize := len(symphonyData) - 9
+		if symphonySize < 0 {
+			symphonySize = 0
+		}
+		sizes.Symphony = symphonySize
 	}
 
 	return sizes
