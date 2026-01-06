@@ -76,17 +76,17 @@ func (cs *CheckoutService) Run() error {
 	mustMapEnv(&cs.emailSvcAddr, "EMAIL_SERVICE_ADDR")
 	mustMapEnv(&cs.paymentSvcAddr, "PAYMENT_SERVICE_ADDR")
 
-	mustConnARPC(&cs.shippingSvcConn, cs.shippingSvcAddr)
-	mustConnARPC(&cs.productCatalogSvcConn, cs.productCatalogSvcAddr)
-	mustConnARPC(&cs.cartSvcConn, cs.cartSvcAddr)
-	mustConnARPC(&cs.currencySvcConn, cs.currencySvcAddr)
-	mustConnARPC(&cs.emailSvcConn, cs.emailSvcAddr)
-	mustConnARPC(&cs.paymentSvcConn, cs.paymentSvcAddr)
+	mustConnARPC(&cs.shippingSvcConn, cs.shippingSvcAddr, "checkout")
+	mustConnARPC(&cs.productCatalogSvcConn, cs.productCatalogSvcAddr, "checkout")
+	mustConnARPC(&cs.cartSvcConn, cs.cartSvcAddr, "checkout")
+	mustConnARPC(&cs.currencySvcConn, cs.currencySvcAddr, "checkout")
+	mustConnARPC(&cs.emailSvcConn, cs.emailSvcAddr, "checkout")
+	mustConnARPC(&cs.paymentSvcConn, cs.paymentSvcAddr, "checkout")
 
 	// Create ARPC server
 	serializer := &serializer.SymphonySerializer{}
 
-	serverLogger, err := messagelogger.NewServerMessageLogger()
+	serverLogger, err := messagelogger.NewServerMessageLogger("checkout")
 	if err != nil {
 		log.Printf("Failed to create server message logger: %v", err)
 	}

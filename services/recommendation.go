@@ -41,12 +41,12 @@ func (s *RecommendationService) Run() error {
 
 	mustMapEnv(&s.productCatalogSvcAddr, "PRODUCT_CATALOG_SERVICE_ADDR")
 
-	mustConnARPC(&s.productCatalogSvcConn, s.productCatalogSvcAddr)
+	mustConnARPC(&s.productCatalogSvcConn, s.productCatalogSvcAddr, "recommendation")
 
 	// Create ARPC server
 	serializer := &serializer.SymphonySerializer{}
 
-	serverLogger, err := messagelogger.NewServerMessageLogger()
+	serverLogger, err := messagelogger.NewServerMessageLogger("recommendation")
 	if err != nil {
 		log.Printf("Failed to create server message logger: %v", err)
 	}

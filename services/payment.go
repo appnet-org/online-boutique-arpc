@@ -95,7 +95,7 @@ func (s *PaymentService) Run() error {
 
 	serializer := &serializer.SymphonySerializer{}
 
-	serverLogger, err := messagelogger.NewServerMessageLogger()
+	serverLogger, err := messagelogger.NewServerMessageLogger("payment")
 	if err != nil {
 		log.Printf("Failed to create server message logger: %v", err)
 	}

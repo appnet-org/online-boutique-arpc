@@ -46,7 +46,7 @@ func (s *EmailService) Run() error {
 		panic(fmt.Sprintf("Failed to initialize logging: %v", err))
 	}
 
-	serverLogger, err := messagelogger.NewServerMessageLogger()
+	serverLogger, err := messagelogger.NewServerMessageLogger("email")
 	if err != nil {
 		log.Printf("Failed to create server message logger: %v", err)
 	}

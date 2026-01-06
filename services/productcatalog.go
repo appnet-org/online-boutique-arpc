@@ -117,7 +117,7 @@ func (s *ProductCatalogService) Run() error {
 
 	serializer := &serializer.SymphonySerializer{}
 
-	serverLogger, err := messagelogger.NewServerMessageLogger()
+	serverLogger, err := messagelogger.NewServerMessageLogger("productcatalog")
 	if err != nil {
 		log.Printf("Failed to create server message logger: %v", err)
 	}

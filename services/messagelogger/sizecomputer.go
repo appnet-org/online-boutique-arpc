@@ -28,6 +28,15 @@ func ComputeSizes(msg interface{}) SerializationSizes {
 		Errors:      make(map[string]string),
 	}
 
+	// Handle nil messages early
+	if msg == nil {
+		sizes.Errors["protobuf"] = "message is nil"
+		sizes.Errors["flatbuffers"] = "message is nil"
+		sizes.Errors["capnproto"] = "message is nil"
+		sizes.Errors["symphony"] = "message is nil"
+		return sizes
+	}
+
 	// Try to compute protobuf size
 	if protoMsg, ok := msg.(proto.Message); ok {
 		data, err := proto.Marshal(protoMsg)
@@ -67,6 +76,10 @@ func ComputeSizes(msg interface{}) SerializationSizes {
 
 // convertToFlatBuffers converts a protobuf message to FlatBuffers
 func convertToFlatBuffers(msg interface{}) ([]byte, error) {
+	if msg == nil {
+		return nil, fmt.Errorf("message is nil")
+	}
+
 	typeName := reflect.TypeOf(msg).String()
 
 	switch v := msg.(type) {
@@ -143,6 +156,10 @@ func convertToFlatBuffers(msg interface{}) ([]byte, error) {
 
 // convertToCapnProto converts a protobuf message to Cap'n Proto
 func convertToCapnProto(msg interface{}) ([]byte, error) {
+	if msg == nil {
+		return nil, fmt.Errorf("message is nil")
+	}
+
 	typeName := reflect.TypeOf(msg).String()
 
 	switch v := msg.(type) {
@@ -219,7 +236,9 @@ func convertToCapnProto(msg interface{}) ([]byte, error) {
 
 // convertToSymphony converts a protobuf message to Symphony
 func convertToSymphony(msg interface{}) ([]byte, error) {
-	typeName := reflect.TypeOf(msg).String()
+	if msg == nil {
+		return nil, fmt.Errorf("message is nil")
+	}
 
 	// Define interface for Symphony marshallable types
 	type symphonyMarshaller interface {
@@ -231,6 +250,7 @@ func convertToSymphony(msg interface{}) ([]byte, error) {
 		return sm.MarshalSymphony()
 	}
 
+	typeName := reflect.TypeOf(msg).String()
 	return nil, fmt.Errorf("unsupported message type for Symphony conversion: %s", typeName)
 }
 

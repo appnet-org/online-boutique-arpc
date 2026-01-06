@@ -29,14 +29,14 @@ type ServerMessageLogger struct {
 }
 
 // NewClientMessageLogger creates a new client-side message logging element
-func NewClientMessageLogger() (element.RPCElement, error) {
+func NewClientMessageLogger(serviceName string) (element.RPCElement, error) {
 	logDir := os.Getenv("MESSAGE_LOG_DIR")
 	if logDir == "" {
 		logDir = "/var/log/arpc-messages"
 	}
 
-	// Create log file name with timestamp but don't open file yet (lazy initialization)
-	filename := filepath.Join(logDir, fmt.Sprintf("client-messages-%s.jsonl", time.Now().Format("20060102-150405")))
+	// Create log file name with service name and timestamp but don't open file yet (lazy initialization)
+	filename := filepath.Join(logDir, fmt.Sprintf("client-messages-%s-%s.jsonl", serviceName, time.Now().Format("20060102-150405")))
 
 	log.Printf("Client message logging will be written to: %s", filename)
 	return &ClientMessageLogger{
@@ -46,14 +46,14 @@ func NewClientMessageLogger() (element.RPCElement, error) {
 }
 
 // NewServerMessageLogger creates a new server-side message logging element
-func NewServerMessageLogger() (element.RPCElement, error) {
+func NewServerMessageLogger(serviceName string) (element.RPCElement, error) {
 	logDir := os.Getenv("MESSAGE_LOG_DIR")
 	if logDir == "" {
 		logDir = "/var/log/arpc-messages"
 	}
 
-	// Create log file name with timestamp but don't open file yet (lazy initialization)
-	filename := filepath.Join(logDir, fmt.Sprintf("server-messages-%s.jsonl", time.Now().Format("20060102-150405")))
+	// Create log file name with service name and timestamp but don't open file yet (lazy initialization)
+	filename := filepath.Join(logDir, fmt.Sprintf("server-messages-%s-%s.jsonl", serviceName, time.Now().Format("20060102-150405")))
 
 	log.Printf("Server message logging will be written to: %s", filename)
 	return &ServerMessageLogger{

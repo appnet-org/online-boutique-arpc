@@ -42,7 +42,7 @@ func (s *AdService) Run() error {
 		panic(fmt.Sprintf("Failed to initialize logging: %v", err))
 	}
 
-	serverLogger, err := messagelogger.NewServerMessageLogger()
+	serverLogger, err := messagelogger.NewServerMessageLogger("ad")
 	if err != nil {
 		log.Printf("Failed to create server message logger: %v", err)
 	}

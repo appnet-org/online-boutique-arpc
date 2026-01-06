@@ -54,7 +54,7 @@ spec:
       volumes:
       - name: message-logs
         hostPath:
-          path: /users/aruj/online-boutique-arpc/logs
+          path: /users/xzhu/online-boutique-arpc/logs
           type: DirectoryOrCreate
 ---
 # volume and persistent volume claim of `frontend`

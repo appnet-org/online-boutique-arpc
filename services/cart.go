@@ -48,7 +48,7 @@ func (s *CartService) Run() error {
 
 	serializer := &serializer.SymphonySerializer{}
 
-	serverLogger, err := messagelogger.NewServerMessageLogger()
+	serverLogger, err := messagelogger.NewServerMessageLogger("cart")
 	if err != nil {
 		log.Printf("Failed to create server message logger: %v", err)
 	}

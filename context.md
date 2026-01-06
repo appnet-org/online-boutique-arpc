@@ -39,7 +39,7 @@ Copied `services/messagelogger/` directory with all files:
 - Generated Go code from `proto/onlineboutique.capnp`
 - Output: `proto/capnp/onlineboutique.capnp.go` (package `capnp`)
 - Changed package name from `onlineboutique` to `capnp` to avoid conflicts
-- Command: `capnp compile -ogo -I/users/aruj/go/pkg/mod/capnproto.org/go/capnp/v3@v3.1.0-alpha.1/std proto/onlineboutique.capnp`
+- Command: `capnp compile -ogo -I/users/xzhu/go/pkg/mod/capnproto.org/go/capnp/v3@v3.1.0-alpha.1/std proto/onlineboutique.capnp`
 
 **Symphony:**
 - No separate generation needed - `MarshalSymphony()` methods are generated directly on protobuf types in `proto/onlineboutique.syn.go`
@@ -94,7 +94,7 @@ volumeMounts:
 volumes:
 - name: message-logs
   hostPath:
-    path: /users/aruj/online-boutique-arpc/logs
+    path: /users/xzhu/online-boutique-arpc/logs
     type: DirectoryOrCreate
 ```
 
@@ -389,7 +389,7 @@ All 33 message types have complete converters for FlatBuffers and Cap'n Proto. S
 
 ## File Locations
 
-- **Log output**: `/users/aruj/online-boutique-arpc/logs/` (on host machine)
+- **Log output**: `/users/xzhu/online-boutique-arpc/logs/` (on host machine)
 - **Container log path**: `/var/log/arpc-messages/`
 - **Message logger code**: `services/messagelogger/`
 - **Generated schemas**:
@@ -425,7 +425,7 @@ flatc --go proto/onlineboutique.fbs
 **3. Generate Cap'n Proto code:**
 ```bash
 # Add message to proto/onlineboutique.capnp
-capnp compile -ogo -I/users/aruj/go/pkg/mod/capnproto.org/go/capnp/v3@v3.1.0-alpha.1/std proto/onlineboutique.capnp
+capnp compile -ogo -I/users/xzhu/go/pkg/mod/capnproto.org/go/capnp/v3@v3.1.0-alpha.1/std proto/onlineboutique.capnp
 # Move generated file
 mv proto/onlineboutique.capnp.go proto/capnp/
 # Fix package name if needed
@@ -583,16 +583,16 @@ curl -X POST http://10.96.88.88/cart/checkout \
 **Check logs on host:**
 ```bash
 # List log files
-ls -la /users/aruj/online-boutique-arpc/logs/
+ls -la /users/xzhu/online-boutique-arpc/logs/
 
 # View client logs (outgoing requests)
-cat /users/aruj/online-boutique-arpc/logs/client-messages-*.jsonl | head -5
+cat /users/xzhu/online-boutique-arpc/logs/client-messages-*.jsonl | head -5
 
 # View server logs (outgoing responses)
-cat /users/aruj/online-boutique-arpc/logs/server-messages-*.jsonl | head -5
+cat /users/xzhu/online-boutique-arpc/logs/server-messages-*.jsonl | head -5
 
 # Pretty print with jq
-cat /users/aruj/online-boutique-arpc/logs/client-messages-*.jsonl | jq .
+cat /users/xzhu/online-boutique-arpc/logs/client-messages-*.jsonl | jq .
 ```
 
 **Log file naming:**
@@ -637,7 +637,7 @@ cat /users/aruj/online-boutique-arpc/logs/client-messages-*.jsonl | jq .
 - **Check:** Look for errors in pod logs: `kubectl logs <pod-name> | grep -i log`
 
 ### Volume mount not working
-- **Verify:** Check hostPath exists: `ls -la /users/aruj/online-boutique-arpc/logs/`
+- **Verify:** Check hostPath exists: `ls -la /users/xzhu/online-boutique-arpc/logs/`
 - **Verify:** Create test file from container: `kubectl exec <pod> -- touch /var/log/arpc-messages/test.txt`
 - **Verify:** Check if test file appears on host
 
@@ -677,7 +677,7 @@ All 10 services must be running for checkout to work:
 ## Quick Reference
 
 **Important paths:**
-- Host log directory: `/users/aruj/online-boutique-arpc/logs/`
+- Host log directory: `/users/xzhu/online-boutique-arpc/logs/`
 - Container log directory: `/var/log/arpc-messages/`
 - Message logger: `services/messagelogger/`
 - Build script: `./build_images.sh`

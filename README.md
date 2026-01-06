@@ -49,3 +49,7 @@ kubectl port-forward svc/jaeger 16686:16686
 
 xdg-open http://localhost:16686
 ```
+
+## Serialization Format Size Comparison
+
+For detailed information about how different serialization formats (Protobuf, FlatBuffers, Cap'n Proto, and Symphony) compare in terms of message size, see [SERIALIZATION_SIZES.md](SERIALIZATION_SIZES.md).

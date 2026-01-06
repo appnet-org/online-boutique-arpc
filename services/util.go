@@ -104,7 +104,7 @@ func isEncryptionEnabled() bool {
 // mustConnARPC creates an aRPC client with optional reliable delivery, congestion control, flow control, and encryption
 // Features are controlled by ENABLE_RELIABLE, ENABLE_CC, ENABLE_FC, and ENABLE_ENCRYPTION environment variables
 // (reliable/CC/FC default to true, encryption defaults to false)
-func mustConnARPC(client **rpc.Client, addr string) {
+func mustConnARPC(client **rpc.Client, addr string, serviceName string) {
 	enableReliable := isReliableEnabled()
 	enableCC := isCCEnabled()
 	enableFC := isFCEnabled()
@@ -115,7 +115,7 @@ func mustConnARPC(client **rpc.Client, addr string) {
 
 	serializer := &serializer.SymphonySerializer{}
 
-	clientLogger, logErr := messagelogger.NewClientMessageLogger()
+	clientLogger, logErr := messagelogger.NewClientMessageLogger(serviceName)
 	if logErr != nil {
 		log.Printf("Failed to create client message logger: %v", logErr)
 	}

@@ -41,7 +41,7 @@ func (s *ShippingService) Run() error {
 
 	serializer := &serializer.SymphonySerializer{}
 
-	serverLogger, err := messagelogger.NewServerMessageLogger()
+	serverLogger, err := messagelogger.NewServerMessageLogger("shipping")
 	if err != nil {
 		log.Printf("Failed to create server message logger: %v", err)
 	}
