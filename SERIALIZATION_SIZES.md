@@ -40,6 +40,44 @@ The message contains:
 - **to_code**: "CNY" (3 bytes)
 - **user_id**: "test" (4 bytes)
 
+## Schema Definitions
+
+The example uses the following protobuf message definitions from `proto/onlineboutique.proto`:
+
+```protobuf
+// Represents an amount of money with its currency type.
+message Money {
+    // The 3-letter currency code defined in ISO 4217.
+    string currency_code = 1;
+
+    // The whole units of the amount.
+    // For example if `currencyCode` is `"USD"`, then 1 unit is one US dollar.
+    int64 units = 2;
+
+    // Number of nano (10^-9) units of the amount.
+    // The value must be between -999,999,999 and +999,999,999 inclusive.
+    // If `units` is positive, `nanos` must be positive or zero.
+    // If `units` is zero, `nanos` can be positive, zero, or negative.
+    // If `units` is negative, `nanos` must be negative or zero.
+    // For example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000.
+    int32 nanos = 3;
+}
+
+message CurrencyConversionRequest {
+    Money from = 1;
+
+    // The 3-letter currency code defined in ISO 4217.
+    string to_code = 2;
+
+    string user_id = 3;
+}
+```
+
+The `CurrencyConversionRequest` message contains:
+- `from` (field 1): A nested `Money` message representing the amount to convert
+- `to_code` (field 2): A string with the target currency code
+- `user_id` (field 3): A string identifying the user making the request
+
 ## Size Breakdown by Format
 
 ### 1. Protobuf: 26 bytes (Smallest)
