@@ -258,7 +258,7 @@ def main():
     system_order = ['Protobuf', 'Flatbuffers', 'Cap\'n Proto', 'fRPC']
     
     # Plot merged CDFs
-    output_file = script_dir / 'cdf_message_sizes.pdf'
+    output_file = script_dir / 'boutique_and_hotel_serialization_size_cdf.pdf'
     plot_merged_cdfs(boutique_data, hotel_data,
                      x_labels=('Online Boutique\nMessage Size (bytes)', 
                               'Hotel Reservation\nMessage Size (bytes)'),
