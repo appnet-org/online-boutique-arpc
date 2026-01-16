@@ -107,7 +107,8 @@ def extract_sizes_by_lib(messages, serialization_libs):
     # Convert to numpy arrays for consistency with template
     sizes_dict = {}
     lib_labels = {'protobuf': 'Protobuf', 'flatbuffers': 'Flatbuffers', 
-                  'capnproto': 'Cap\'n Proto', 'symphony': 'fRPC'}
+                  'capnproto': 'Cap\'n Proto', 'symphony': 'fRPC',
+                  'symphony_hybrid': 'fRPC (B-Opt)'}
     
     for lib in serialization_libs:
         if lib in sizes_by_lib and sizes_by_lib[lib]:
@@ -140,7 +141,7 @@ def process_logs_directory(logs_dir, application_name):
         print(f"Deduplication ratio: {duplicates/total_messages*100:.2f}%")
     
     # Extract sizes for each serialization library
-    serialization_libs = ['protobuf', 'flatbuffers', 'capnproto', 'symphony']
+    serialization_libs = ['protobuf', 'flatbuffers', 'capnproto', 'symphony', 'symphony_hybrid']
     sizes_dict = extract_sizes_by_lib(unique_messages, serialization_libs)
     
     # Print statistics
@@ -168,12 +169,12 @@ def plot_merged_cdfs(data_left, data_right,
     fig, axes = plt.subplots(1, 2, figsize=(8, 3))
     
     # Standard SIGCOMM Color Palette & Styles
-    colors = ['#6acc64', '#4878d0', '#82c6e2', '#e6a04e']
-    linestyles = ['-', '--', '-.', ':']
+    colors = ['#6acc64', '#4878d0', '#82c6e2', '#e6a04e', '#d65f5f']
+    linestyles = ['-', '--', '-.', ':', (0, (3, 1, 1, 1))]
     
     # Default system order
     if system_order is None:
-        system_order = ['Protobuf', 'Flatbuffers', 'Cap\'n Proto', 'fRPC']
+        system_order = ['Protobuf', 'Flatbuffers', 'Cap\'n Proto', 'fRPC', 'fRPC (B-Opt)']
     
     datasets = [data_left, data_right]
     
@@ -214,9 +215,10 @@ def plot_merged_cdfs(data_left, data_right,
     fig.legend(handles, labels,
                loc='lower center',
                bbox_to_anchor=(0.5, -0.20),
-               ncol=4,
+               ncol=5,
                frameon=True,
-               columnspacing=1.5)
+               columnspacing=1.5,
+               fontsize=12)
     
     # 5. Adjust Layout
     plt.tight_layout()
@@ -255,7 +257,7 @@ def main():
         hotel_data = boutique_data.copy()
     
     # Define system order
-    system_order = ['Protobuf', 'Flatbuffers', 'Cap\'n Proto', 'fRPC']
+    system_order = ['Protobuf', 'Flatbuffers', 'Cap\'n Proto', 'fRPC', 'fRPC (B-Opt)']
     
     # Plot merged CDFs
     output_file = script_dir / 'boutique_and_hotel_serialization_size_cdf.pdf'
