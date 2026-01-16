@@ -11,21 +11,23 @@ import (
 
 // SerializationSizes holds the sizes of different serialization formats
 type SerializationSizes struct {
-	Protobuf    int               `json:"protobuf"`
-	FlatBuffers int               `json:"flatbuffers"`
-	CapnProto   int               `json:"capnproto"`
-	Symphony    int               `json:"symphony"`
-	Errors      map[string]string `json:"errors,omitempty"`
+	Protobuf       int               `json:"protobuf"`
+	FlatBuffers    int               `json:"flatbuffers"`
+	CapnProto      int               `json:"capnproto"`
+	Symphony       int               `json:"symphony"`
+	SymphonyHybrid int               `json:"symphony_hybrid"`
+	Errors         map[string]string `json:"errors,omitempty"`
 }
 
 // ComputeSizes computes serialization sizes for all formats
 func ComputeSizes(msg interface{}) SerializationSizes {
 	sizes := SerializationSizes{
-		Protobuf:    -1,
-		FlatBuffers: -1,
-		CapnProto:   -1,
-		Symphony:    -1,
-		Errors:      make(map[string]string),
+		Protobuf:       -1,
+		FlatBuffers:    -1,
+		CapnProto:      -1,
+		Symphony:       -1,
+		SymphonyHybrid: -1,
+		Errors:         make(map[string]string),
 	}
 
 	// Handle nil messages early
@@ -34,6 +36,7 @@ func ComputeSizes(msg interface{}) SerializationSizes {
 		sizes.Errors["flatbuffers"] = "message is nil"
 		sizes.Errors["capnproto"] = "message is nil"
 		sizes.Errors["symphony"] = "message is nil"
+		sizes.Errors["symphony_hybrid"] = "message is nil"
 		return sizes
 	}
 
@@ -74,6 +77,17 @@ func ComputeSizes(msg interface{}) SerializationSizes {
 			symphonySize = 0
 		}
 		sizes.Symphony = symphonySize
+	}
+
+	symphonyHybridData, symphonyHybridErr := convertToSymphonyHybrid(msg)
+	if symphonyHybridErr != nil {
+		sizes.Errors["symphony_hybrid"] = symphonyHybridErr.Error()
+	} else {
+		symphonyHybridSize := len(symphonyHybridData) - 9
+		if symphonyHybridSize < 0 {
+			symphonyHybridSize = 0
+		}
+		sizes.SymphonyHybrid = symphonyHybridSize
 	}
 
 	return sizes
@@ -257,6 +271,24 @@ func convertToSymphony(msg interface{}) ([]byte, error) {
 
 	typeName := reflect.TypeOf(msg).String()
 	return nil, fmt.Errorf("unsupported message type for Symphony conversion: %s", typeName)
+}
+
+// convertToSymphonyHybrid converts a protobuf message to Symphony Hybrid
+func convertToSymphonyHybrid(msg interface{}) ([]byte, error) {
+	if msg == nil {
+		return nil, fmt.Errorf("message is nil")
+	}
+
+	type symphonyHybridMarshaller interface {
+		MarshalSymphonyHybrid() ([]byte, error)
+	}
+
+	if shm, ok := msg.(symphonyHybridMarshaller); ok {
+		return shm.MarshalSymphonyHybrid()
+	}
+
+	typeName := reflect.TypeOf(msg).String()
+	return nil, fmt.Errorf("unsupported message type for Symphony Hybrid conversion: %s", typeName)
 }
 
 // GetMessageTypeName returns the type name of the message
