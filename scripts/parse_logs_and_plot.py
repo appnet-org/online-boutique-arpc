@@ -238,8 +238,10 @@ def main():
     boutique_logs_dir = boutique_logs_dir.resolve()
     
     # Hotel reservation logs directory (using boutique as placeholder for now)
-    hotel_logs_dir = script_dir / '../hotel_logs'
-    hotel_logs_dir = hotel_logs_dir.resolve()
+    # hotel_logs_dir = script_dir / '../hotel_logs'
+    # hotel_logs_dir = hotel_logs_dir.resolve()
+    hotel_logs_dir = Path('/users/xzhu/hotel-reservation-arpc/logs_filtered')
+    
     
     # Check if hotel logs directory exists, if not use boutique as placeholder
     if not hotel_logs_dir.exists():
