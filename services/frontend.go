@@ -25,11 +25,11 @@ import (
 
 const (
 	defaultCurrency            = "CNY"
-	frontendReadRPCTimeout     = 10 * time.Millisecond
-	frontendWriteRPCTimeout    = 10 * time.Millisecond
-	frontendCheckoutRPCTimeout = 10 * time.Millisecond
-	frontendAdTimeout          = 10 * time.Millisecond
-	currencyConversionTimeout  = 10 * time.Millisecond
+	frontendReadRPCTimeout     = 1 * time.Millisecond
+	frontendWriteRPCTimeout    = 1 * time.Millisecond
+	frontendCheckoutRPCTimeout = 1 * time.Millisecond
+	frontendAdTimeout          = 1 * time.Millisecond
+	currencyConversionTimeout  = 1 * time.Millisecond
 
 	cookiePrefix   = "shop_"
 	cookieCurrency = cookiePrefix + "currency"

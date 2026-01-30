@@ -25,7 +25,7 @@ const (
 	nanosMin           = -999999999
 	nanosMax           = +999999999
 	nanosMod           = 1000000000
-	checkoutRPCTimeout = 10 * time.Millisecond
+	checkoutRPCTimeout = 1 * time.Millisecond
 )
 
 var (
