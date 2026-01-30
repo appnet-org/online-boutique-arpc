@@ -13,7 +13,7 @@ spec:
   ports:
   - port: 11001
     targetPort: 11001
-    name: arpc-cart
+    name: arpc-h2-cart
     protocol: UDP
   selector:
     app: cart
@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-cart
       containers:
       - name: cart
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-h2:latest
         command: ["/app/onlineboutique"]
         args: ["cart"]
         imagePullPolicy: Always

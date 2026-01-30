@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	stdErrors "errors"
 	"fmt"
 	"html/template"
 	"log"
@@ -12,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/appnet-org/arpc/pkg/logging"
-	"github.com/appnet-org/arpc/pkg/rpc"
+	"github.com/appnet-org/arpc-h2/pkg/logging"
+	"github.com/appnet-org/arpc-h2/pkg/rpc"
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
 	"github.com/appnetorg/online-boutique-arpc/services/validator"
 	"github.com/opentracing/opentracing-go"
@@ -23,7 +24,12 @@ import (
 )
 
 const (
-	defaultCurrency = "CNY"
+	defaultCurrency            = "CNY"
+	frontendReadRPCTimeout     = 10 * time.Millisecond
+	frontendWriteRPCTimeout    = 10 * time.Millisecond
+	frontendCheckoutRPCTimeout = 10 * time.Millisecond
+	frontendAdTimeout          = 10 * time.Millisecond
+	currencyConversionTimeout  = 10 * time.Millisecond
 
 	cookiePrefix   = "shop_"
 	cookieCurrency = cookiePrefix + "currency"
@@ -279,8 +285,10 @@ func (fe *frontendServer) placeOrderHandler(w http.ResponseWriter, r *http.Reque
 	log.Println("placeOrderHandler: input validation successful")
 
 	checkoutClient := pb.NewCheckoutServiceClient(fe.checkoutSvcConn)
+	rpcCtx, cancel := frontendRPCContext(r.Context(), frontendCheckoutRPCTimeout)
+	defer cancel()
 	order, err := checkoutClient.
-		PlaceOrder(r.Context(), &pb.PlaceOrderRequest{
+		PlaceOrder(rpcCtx, &pb.PlaceOrderRequest{
 			Email: payload.Email,
 			CreditCard: &pb.CreditCardInfo{
 				CreditCardNumber:          payload.CcNumber,
@@ -391,10 +399,16 @@ func (fe *frontendServer) addToCartHandler(w http.ResponseWriter, r *http.Reques
 
 func (fe *frontendServer) getCurrencies(ctx context.Context, userID string) ([]string, error) {
 	currencyClient := pb.NewCurrencyServiceClient(fe.currencySvcConn)
+	rpcCtx, cancel := frontendRPCContext(ctx, frontendReadRPCTimeout)
+	defer cancel()
 	currs, err := currencyClient.
-		GetSupportedCurrencies(ctx, &pb.EmptyUser{UserId: userID})
+		GetSupportedCurrencies(rpcCtx, &pb.EmptyUser{UserId: userID})
 
 	if err != nil {
+		if isContextError(err) {
+			log.Printf("getCurrencies RPC canceled/timeout, using default currency: %v", err)
+			return []string{defaultCurrency}, nil
+		}
 		log.Printf("getCurrencies RPC failed: %v", err)
 		return nil, err
 	}
@@ -412,10 +426,16 @@ func (fe *frontendServer) getCurrencies(ctx context.Context, userID string) ([]s
 
 func (fe *frontendServer) getProducts(ctx context.Context, userID string) ([]*pb.Product, error) {
 	productCatalogClient := pb.NewProductCatalogServiceClient(fe.productCatalogSvcConn)
+	rpcCtx, cancel := frontendRPCContext(ctx, frontendReadRPCTimeout)
+	defer cancel()
 	resp, err := productCatalogClient.
-		ListProducts(ctx, &pb.EmptyUser{UserId: userID})
+		ListProducts(rpcCtx, &pb.EmptyUser{UserId: userID})
 
 	if err != nil {
+		if isContextError(err) {
+			log.Printf("getProducts RPC canceled/timeout, returning empty list: %v", err)
+			return []*pb.Product{}, nil
+		}
 		log.Printf("getProducts RPC failed: %v", err)
 		return nil, err
 	}
@@ -427,16 +447,24 @@ func (fe *frontendServer) getProducts(ctx context.Context, userID string) ([]*pb
 
 func (fe *frontendServer) getProduct(ctx context.Context, id string) (*pb.Product, error) {
 	productCatalogClient := pb.NewProductCatalogServiceClient(fe.productCatalogSvcConn)
+	rpcCtx, cancel := frontendRPCContext(ctx, frontendReadRPCTimeout)
+	defer cancel()
 	resp, err := productCatalogClient.
-		GetProduct(ctx, &pb.GetProductRequest{Id: id})
+		GetProduct(rpcCtx, &pb.GetProductRequest{Id: id})
 	return resp, err
 }
 
 func (fe *frontendServer) getCart(ctx context.Context, userID string) ([]*pb.CartItem, error) {
 	cartClient := pb.NewCartServiceClient(fe.cartSvcConn)
-	resp, err := cartClient.GetCart(ctx, &pb.GetCartRequest{UserId: userID})
+	rpcCtx, cancel := frontendRPCContext(ctx, frontendReadRPCTimeout)
+	defer cancel()
+	resp, err := cartClient.GetCart(rpcCtx, &pb.GetCartRequest{UserId: userID})
 
 	if err != nil {
+		if isContextError(err) {
+			log.Printf("getCart RPC canceled/timeout, returning empty cart: %v", err)
+			return []*pb.CartItem{}, nil
+		}
 		log.Printf("getCart RPC failed: %v", err)
 		return nil, err
 	}
@@ -448,7 +476,9 @@ func (fe *frontendServer) getCart(ctx context.Context, userID string) ([]*pb.Car
 
 func (fe *frontendServer) insertCart(ctx context.Context, userID, productID string, quantity int32) error {
 	cartClient := pb.NewCartServiceClient(fe.cartSvcConn)
-	_, err := cartClient.AddItem(ctx, &pb.AddItemRequest{
+	rpcCtx, cancel := frontendRPCContext(ctx, frontendWriteRPCTimeout)
+	defer cancel()
+	_, err := cartClient.AddItem(rpcCtx, &pb.AddItemRequest{
 		UserId: userID,
 		Item: &pb.CartItem{
 			ProductId: productID,
@@ -463,13 +493,19 @@ func (fe *frontendServer) convertCurrency(ctx context.Context, money *pb.Money, 
 	}
 
 	currencyClient := pb.NewCurrencyServiceClient(fe.currencySvcConn)
+	rpcCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), currencyConversionTimeout)
+	defer cancel()
 	result, err := currencyClient.
-		Convert(ctx, &pb.CurrencyConversionRequest{
+		Convert(rpcCtx, &pb.CurrencyConversionRequest{
 			From:   money,
 			ToCode: currency,
 			UserId: userID})
 
 	if err != nil {
+		if stdErrors.Is(err, context.Canceled) || stdErrors.Is(err, context.DeadlineExceeded) {
+			log.Printf("convertCurrency RPC canceled/timeout, using original money: %v", err)
+			return money, nil
+		}
 		log.Printf("convertCurrency RPC failed: %v", err)
 		return nil, err
 	}
@@ -480,18 +516,28 @@ func (fe *frontendServer) convertCurrency(ctx context.Context, money *pb.Money, 
 
 func (fe *frontendServer) getRecommendations(ctx context.Context, userID string, productIDs []string) ([]*pb.Product, error) {
 	recommendationClient := pb.NewRecommendationServiceClient(fe.recommendationSvcConn)
-	resp, err := recommendationClient.ListRecommendations(ctx,
+	rpcCtx, cancel := frontendRPCContext(ctx, frontendReadRPCTimeout)
+	defer cancel()
+	resp, err := recommendationClient.ListRecommendations(rpcCtx,
 		&pb.ListRecommendationsRequest{UserId: userID, ProductIds: productIDs})
 	if err != nil {
+		if isContextError(err) {
+			log.Printf("getRecommendations RPC canceled/timeout, returning empty list: %v", err)
+			return []*pb.Product{}, nil
+		}
 		return nil, err
 	}
-	out := make([]*pb.Product, len(resp.GetProductIds()))
-	for i, v := range resp.GetProductIds() {
+	out := make([]*pb.Product, 0, len(resp.GetProductIds()))
+	for _, v := range resp.GetProductIds() {
 		p, err := fe.getProduct(ctx, v)
 		if err != nil {
+			if isContextError(err) {
+				log.Printf("getRecommendations product lookup canceled/timeout for %q: %v", v, err)
+				continue
+			}
 			return nil, errors.Wrapf(err, "failed to get recommended product info (#%s)", v)
 		}
-		out[i] = p
+		out = append(out, p)
 	}
 	if len(out) > 4 {
 		out = out[:4] // take only first four to fit the UI
@@ -500,7 +546,7 @@ func (fe *frontendServer) getRecommendations(ctx context.Context, userID string,
 }
 
 func (fe *frontendServer) getAd(ctx context.Context, ctxKeys []string, userID string) ([]*pb.Ad, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*100)
+	ctx, cancel := frontendRPCContext(ctx, frontendAdTimeout)
 	defer cancel()
 
 	adClient := pb.NewAdServiceClient(fe.adSvcConn)
@@ -517,6 +563,14 @@ func (fe *frontendServer) getAd(ctx context.Context, ctxKeys []string, userID st
 	ads := resp.GetAds()
 	log.Printf("getAd RPC completed, returned %d ads", len(ads))
 	return ads, nil
+}
+
+func frontendRPCContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.WithoutCancel(ctx), timeout)
+}
+
+func isContextError(err error) bool {
+	return stdErrors.Is(err, context.Canceled) || stdErrors.Is(err, context.DeadlineExceeded)
 }
 
 func currentCurrency(r *http.Request) string {

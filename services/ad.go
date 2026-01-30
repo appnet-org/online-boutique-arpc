@@ -7,10 +7,10 @@ import (
 	"math/rand"
 	"strconv"
 
-	"github.com/appnet-org/arpc/pkg/logging"
-	"github.com/appnet-org/arpc/pkg/rpc"
-	"github.com/appnet-org/arpc/pkg/rpc/element"
-	"github.com/appnet-org/arpc/pkg/serializer"
+	"github.com/appnet-org/arpc-h2/pkg/logging"
+	"github.com/appnet-org/arpc-h2/pkg/rpc"
+	"github.com/appnet-org/arpc-h2/pkg/rpc/element"
+	"github.com/appnet-org/arpc-h2/pkg/serializer"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
 	"github.com/appnetorg/online-boutique-arpc/services/tracing"
@@ -43,7 +43,7 @@ func (s *AdService) Run() error {
 
 	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	serializer := &serializer.SymphonySerializer{}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements...)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}

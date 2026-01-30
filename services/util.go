@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/appnet-org/arpc/pkg/logging"
-	"github.com/appnet-org/arpc/pkg/rpc"
-	"github.com/appnet-org/arpc/pkg/rpc/element"
-	"github.com/appnet-org/arpc/pkg/serializer"
+	"github.com/appnet-org/arpc-h2/pkg/logging"
+	"github.com/appnet-org/arpc-h2/pkg/rpc"
+	"github.com/appnet-org/arpc-h2/pkg/rpc/element"
+	"github.com/appnet-org/arpc-h2/pkg/serializer"
 	"github.com/appnetorg/online-boutique-arpc/services/tracing"
 	"github.com/pkg/errors"
 )
@@ -48,7 +48,7 @@ func mustConnARPC(client **rpc.Client, addr string) {
 
 	var err error
 	// Use 0.0.0.0:0 to explicitly bind to IPv4 instead of :0 which defaults to IPv6
-	*client, err = rpc.NewClientWithLocalAddr(serializer, addr, "0.0.0.0:0", clientElements)
+	*client, err = rpc.NewClientWithLocalAddr(serializer, addr, "0.0.0.0:0", clientElements...)
 	if err != nil {
 		panic(errors.Wrapf(err, "arpc: failed to connect %s", addr))
 	}

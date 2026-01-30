@@ -13,7 +13,7 @@ spec:
   ports:
   - port: 11004
     targetPort: 11004
-    name: arpc-payment
+    name: arpc-h2-payment
     protocol: UDP
   selector:
     app: payment
@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-payment
       containers:
       - name: payment
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-h2:latest
         command: ["/app/onlineboutique"]
         args: ["payment"]
         imagePullPolicy: Always

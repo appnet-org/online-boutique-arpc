@@ -13,7 +13,7 @@ spec:
   ports:
   - port: 11007
     targetPort: 11007
-    name: arpc-checkout
+    name: arpc-h2-checkout
     protocol: UDP
   selector:
     app: checkout
@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-checkout
       containers:
       - name: checkout
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-h2:latest
         command: ["/app/onlineboutique"]
         args: ["checkout"]
         imagePullPolicy: Always

@@ -13,7 +13,7 @@ spec:
   ports:
   - port: 11006
     targetPort: 11006
-    name: arpc-email
+    name: arpc-h2-email
     protocol: UDP
   selector:
     app: email
@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-email
       containers:
       - name: email
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-h2:latest
         command: ["/app/onlineboutique"]
         args: ["email"]
         imagePullPolicy: Always

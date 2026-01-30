@@ -10,7 +10,7 @@ spec:
   ports:
   - port: 11001
     targetPort: 11001
-    name: arpc-cart
+    name: arpc-h2-cart
     protocol: UDP
   selector:
     app: cart
@@ -41,7 +41,7 @@ spec:
       serviceAccountName: onlineboutique-cart
       containers:
       - name: cart
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-h2:latest
         command:
         - /app/onlineboutique
         args:
@@ -53,7 +53,7 @@ spec:
         - name: LOG_LEVEL
           value: info
       - name: symphony-proxy
-        image: appnetorg/symphony-proxy:latest
+        image: appnetorg/symphony-proxy-h2:latest
         command:
         - /app/proxy
         securityContext:
@@ -133,7 +133,7 @@ spec:
         - name: ENABLE_PACKET_BUFFERING
           value: "true"
       - name: symphony-proxy
-        image: appnetorg/symphony-proxy:latest
+        image: appnetorg/symphony-proxy-h2:latest
         command:
         - /app/proxy
         securityContext:

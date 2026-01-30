@@ -3,67 +3,9 @@ package onlineboutique
 
 import (
 	"context"
-	"github.com/appnet-org/arpc/pkg/rpc"
-	"github.com/appnet-org/arpc/pkg/rpc/element"
+
+	"github.com/appnet-org/arpc-h2/pkg/rpc"
 )
-
-// Service IDs
-const (
-	ServiceID_CartService           = 1
-	ServiceID_RecommendationService = 2
-	ServiceID_ProductCatalogService = 3
-	ServiceID_ShippingService       = 4
-	ServiceID_CurrencyService       = 5
-	ServiceID_PaymentService        = 6
-	ServiceID_EmailService          = 7
-	ServiceID_CheckoutService       = 8
-	ServiceID_AdService             = 9
-)
-
-// Service name <-> ID mappings
-var serviceNameToID = map[string]uint32{
-	"CartService":           ServiceID_CartService,
-	"RecommendationService": ServiceID_RecommendationService,
-	"ProductCatalogService": ServiceID_ProductCatalogService,
-	"ShippingService":       ServiceID_ShippingService,
-	"CurrencyService":       ServiceID_CurrencyService,
-	"PaymentService":        ServiceID_PaymentService,
-	"EmailService":          ServiceID_EmailService,
-	"CheckoutService":       ServiceID_CheckoutService,
-	"AdService":             ServiceID_AdService,
-}
-
-var serviceIDToName = map[uint32]string{
-	ServiceID_CartService:           "CartService",
-	ServiceID_RecommendationService: "RecommendationService",
-	ServiceID_ProductCatalogService: "ProductCatalogService",
-	ServiceID_ShippingService:       "ShippingService",
-	ServiceID_CurrencyService:       "CurrencyService",
-	ServiceID_PaymentService:        "PaymentService",
-	ServiceID_EmailService:          "EmailService",
-	ServiceID_CheckoutService:       "CheckoutService",
-	ServiceID_AdService:             "AdService",
-}
-
-// Method IDs for CartService
-const (
-	CartService_MethodID_AddItem   = 1
-	CartService_MethodID_GetCart   = 2
-	CartService_MethodID_EmptyCart = 3
-)
-
-// Method name <-> ID mappings for CartService
-var CartService_methodNameToID = map[string]uint32{
-	"AddItem":   CartService_MethodID_AddItem,
-	"GetCart":   CartService_MethodID_GetCart,
-	"EmptyCart": CartService_MethodID_EmptyCart,
-}
-
-var CartService_methodIDToName = map[uint32]string{
-	CartService_MethodID_AddItem:   "AddItem",
-	CartService_MethodID_GetCart:   "GetCart",
-	CartService_MethodID_EmptyCart: "EmptyCart",
-}
 
 // CartServiceClient is the client API for CartService service.
 type CartServiceClient interface {
@@ -77,10 +19,6 @@ type arpcCartServiceClient struct {
 }
 
 func NewCartServiceClient(client *rpc.Client) CartServiceClient {
-	// Create and register service registry
-	registry := rpc.NewServiceRegistry()
-	registry.RegisterService("CartService", ServiceID_CartService, CartService_methodNameToID)
-	client.SetServiceRegistry(registry)
 	return &arpcCartServiceClient{client: client}
 }
 
@@ -117,112 +55,58 @@ type CartServiceServer interface {
 func RegisterCartServiceServer(s *rpc.Server, srv CartServiceServer) {
 	s.RegisterService(&rpc.ServiceDesc{
 		ServiceName: "CartService",
-		ServiceID:   ServiceID_CartService,
 		ServiceImpl: srv,
-		MethodsByID: map[uint32]*rpc.MethodDesc{
-			CartService_MethodID_AddItem: {
+		Methods: map[string]*rpc.MethodDesc{
+			"AddItem": {
 				MethodName: "AddItem",
-				MethodID:   CartService_MethodID_AddItem,
 				Handler:    _CartService_AddItem_Handler,
 			},
-			CartService_MethodID_GetCart: {
+			"GetCart": {
 				MethodName: "GetCart",
-				MethodID:   CartService_MethodID_GetCart,
 				Handler:    _CartService_GetCart_Handler,
 			},
-			CartService_MethodID_EmptyCart: {
+			"EmptyCart": {
 				MethodName: "EmptyCart",
-				MethodID:   CartService_MethodID_EmptyCart,
 				Handler:    _CartService_EmptyCart_Handler,
 			},
 		},
 	}, srv)
 }
 
-func _CartService_AddItem_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(AddItemRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _CartService_AddItem_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(AddItemRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(CartServiceServer).AddItem(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(CartServiceServer).AddItem(ctx, req.Payload.(*AddItemRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
+	return result, nil
 }
 
-func _CartService_GetCart_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(GetCartRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _CartService_GetCart_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(GetCartRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(CartServiceServer).GetCart(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(CartServiceServer).GetCart(ctx, req.Payload.(*GetCartRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
+	return result, nil
 }
 
-func _CartService_EmptyCart_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(EmptyCartRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _CartService_EmptyCart_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(EmptyCartRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(CartServiceServer).EmptyCart(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(CartServiceServer).EmptyCart(ctx, req.Payload.(*EmptyCartRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
-}
-
-// Method IDs for RecommendationService
-const (
-	RecommendationService_MethodID_ListRecommendations = 1
-)
-
-// Method name <-> ID mappings for RecommendationService
-var RecommendationService_methodNameToID = map[string]uint32{
-	"ListRecommendations": RecommendationService_MethodID_ListRecommendations,
-}
-
-var RecommendationService_methodIDToName = map[uint32]string{
-	RecommendationService_MethodID_ListRecommendations: "ListRecommendations",
+	return result, nil
 }
 
 // RecommendationServiceClient is the client API for RecommendationService service.
@@ -235,10 +119,6 @@ type arpcRecommendationServiceClient struct {
 }
 
 func NewRecommendationServiceClient(client *rpc.Client) RecommendationServiceClient {
-	// Create and register service registry
-	registry := rpc.NewServiceRegistry()
-	registry.RegisterService("RecommendationService", ServiceID_RecommendationService, RecommendationService_methodNameToID)
-	client.SetServiceRegistry(registry)
 	return &arpcRecommendationServiceClient{client: client}
 }
 
@@ -257,60 +137,26 @@ type RecommendationServiceServer interface {
 func RegisterRecommendationServiceServer(s *rpc.Server, srv RecommendationServiceServer) {
 	s.RegisterService(&rpc.ServiceDesc{
 		ServiceName: "RecommendationService",
-		ServiceID:   ServiceID_RecommendationService,
 		ServiceImpl: srv,
-		MethodsByID: map[uint32]*rpc.MethodDesc{
-			RecommendationService_MethodID_ListRecommendations: {
+		Methods: map[string]*rpc.MethodDesc{
+			"ListRecommendations": {
 				MethodName: "ListRecommendations",
-				MethodID:   RecommendationService_MethodID_ListRecommendations,
 				Handler:    _RecommendationService_ListRecommendations_Handler,
 			},
 		},
 	}, srv)
 }
 
-func _RecommendationService_ListRecommendations_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(ListRecommendationsRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _RecommendationService_ListRecommendations_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(ListRecommendationsRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(RecommendationServiceServer).ListRecommendations(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(RecommendationServiceServer).ListRecommendations(ctx, req.Payload.(*ListRecommendationsRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
-}
-
-// Method IDs for ProductCatalogService
-const (
-	ProductCatalogService_MethodID_ListProducts   = 1
-	ProductCatalogService_MethodID_GetProduct     = 2
-	ProductCatalogService_MethodID_SearchProducts = 3
-)
-
-// Method name <-> ID mappings for ProductCatalogService
-var ProductCatalogService_methodNameToID = map[string]uint32{
-	"ListProducts":   ProductCatalogService_MethodID_ListProducts,
-	"GetProduct":     ProductCatalogService_MethodID_GetProduct,
-	"SearchProducts": ProductCatalogService_MethodID_SearchProducts,
-}
-
-var ProductCatalogService_methodIDToName = map[uint32]string{
-	ProductCatalogService_MethodID_ListProducts:   "ListProducts",
-	ProductCatalogService_MethodID_GetProduct:     "GetProduct",
-	ProductCatalogService_MethodID_SearchProducts: "SearchProducts",
+	return result, nil
 }
 
 // ProductCatalogServiceClient is the client API for ProductCatalogService service.
@@ -325,10 +171,6 @@ type arpcProductCatalogServiceClient struct {
 }
 
 func NewProductCatalogServiceClient(client *rpc.Client) ProductCatalogServiceClient {
-	// Create and register service registry
-	registry := rpc.NewServiceRegistry()
-	registry.RegisterService("ProductCatalogService", ServiceID_ProductCatalogService, ProductCatalogService_methodNameToID)
-	client.SetServiceRegistry(registry)
 	return &arpcProductCatalogServiceClient{client: client}
 }
 
@@ -365,115 +207,58 @@ type ProductCatalogServiceServer interface {
 func RegisterProductCatalogServiceServer(s *rpc.Server, srv ProductCatalogServiceServer) {
 	s.RegisterService(&rpc.ServiceDesc{
 		ServiceName: "ProductCatalogService",
-		ServiceID:   ServiceID_ProductCatalogService,
 		ServiceImpl: srv,
-		MethodsByID: map[uint32]*rpc.MethodDesc{
-			ProductCatalogService_MethodID_ListProducts: {
+		Methods: map[string]*rpc.MethodDesc{
+			"ListProducts": {
 				MethodName: "ListProducts",
-				MethodID:   ProductCatalogService_MethodID_ListProducts,
 				Handler:    _ProductCatalogService_ListProducts_Handler,
 			},
-			ProductCatalogService_MethodID_GetProduct: {
+			"GetProduct": {
 				MethodName: "GetProduct",
-				MethodID:   ProductCatalogService_MethodID_GetProduct,
 				Handler:    _ProductCatalogService_GetProduct_Handler,
 			},
-			ProductCatalogService_MethodID_SearchProducts: {
+			"SearchProducts": {
 				MethodName: "SearchProducts",
-				MethodID:   ProductCatalogService_MethodID_SearchProducts,
 				Handler:    _ProductCatalogService_SearchProducts_Handler,
 			},
 		},
 	}, srv)
 }
 
-func _ProductCatalogService_ListProducts_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(EmptyUser)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _ProductCatalogService_ListProducts_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(EmptyUser)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(ProductCatalogServiceServer).ListProducts(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(ProductCatalogServiceServer).ListProducts(ctx, req.Payload.(*EmptyUser))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
+	return result, nil
 }
 
-func _ProductCatalogService_GetProduct_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(GetProductRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _ProductCatalogService_GetProduct_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(GetProductRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(ProductCatalogServiceServer).GetProduct(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(ProductCatalogServiceServer).GetProduct(ctx, req.Payload.(*GetProductRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
+	return result, nil
 }
 
-func _ProductCatalogService_SearchProducts_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(SearchProductsRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _ProductCatalogService_SearchProducts_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(SearchProductsRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(ProductCatalogServiceServer).SearchProducts(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(ProductCatalogServiceServer).SearchProducts(ctx, req.Payload.(*SearchProductsRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
-}
-
-// Method IDs for ShippingService
-const (
-	ShippingService_MethodID_GetQuote  = 1
-	ShippingService_MethodID_ShipOrder = 2
-)
-
-// Method name <-> ID mappings for ShippingService
-var ShippingService_methodNameToID = map[string]uint32{
-	"GetQuote":  ShippingService_MethodID_GetQuote,
-	"ShipOrder": ShippingService_MethodID_ShipOrder,
-}
-
-var ShippingService_methodIDToName = map[uint32]string{
-	ShippingService_MethodID_GetQuote:  "GetQuote",
-	ShippingService_MethodID_ShipOrder: "ShipOrder",
+	return result, nil
 }
 
 // ShippingServiceClient is the client API for ShippingService service.
@@ -487,10 +272,6 @@ type arpcShippingServiceClient struct {
 }
 
 func NewShippingServiceClient(client *rpc.Client) ShippingServiceClient {
-	// Create and register service registry
-	registry := rpc.NewServiceRegistry()
-	registry.RegisterService("ShippingService", ServiceID_ShippingService, ShippingService_methodNameToID)
-	client.SetServiceRegistry(registry)
 	return &arpcShippingServiceClient{client: client}
 }
 
@@ -518,86 +299,42 @@ type ShippingServiceServer interface {
 func RegisterShippingServiceServer(s *rpc.Server, srv ShippingServiceServer) {
 	s.RegisterService(&rpc.ServiceDesc{
 		ServiceName: "ShippingService",
-		ServiceID:   ServiceID_ShippingService,
 		ServiceImpl: srv,
-		MethodsByID: map[uint32]*rpc.MethodDesc{
-			ShippingService_MethodID_GetQuote: {
+		Methods: map[string]*rpc.MethodDesc{
+			"GetQuote": {
 				MethodName: "GetQuote",
-				MethodID:   ShippingService_MethodID_GetQuote,
 				Handler:    _ShippingService_GetQuote_Handler,
 			},
-			ShippingService_MethodID_ShipOrder: {
+			"ShipOrder": {
 				MethodName: "ShipOrder",
-				MethodID:   ShippingService_MethodID_ShipOrder,
 				Handler:    _ShippingService_ShipOrder_Handler,
 			},
 		},
 	}, srv)
 }
 
-func _ShippingService_GetQuote_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(GetQuoteRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _ShippingService_GetQuote_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(GetQuoteRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(ShippingServiceServer).GetQuote(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(ShippingServiceServer).GetQuote(ctx, req.Payload.(*GetQuoteRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
+	return result, nil
 }
 
-func _ShippingService_ShipOrder_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(ShipOrderRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _ShippingService_ShipOrder_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(ShipOrderRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(ShippingServiceServer).ShipOrder(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(ShippingServiceServer).ShipOrder(ctx, req.Payload.(*ShipOrderRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
-}
-
-// Method IDs for CurrencyService
-const (
-	CurrencyService_MethodID_GetSupportedCurrencies = 1
-	CurrencyService_MethodID_Convert                = 2
-)
-
-// Method name <-> ID mappings for CurrencyService
-var CurrencyService_methodNameToID = map[string]uint32{
-	"GetSupportedCurrencies": CurrencyService_MethodID_GetSupportedCurrencies,
-	"Convert":                CurrencyService_MethodID_Convert,
-}
-
-var CurrencyService_methodIDToName = map[uint32]string{
-	CurrencyService_MethodID_GetSupportedCurrencies: "GetSupportedCurrencies",
-	CurrencyService_MethodID_Convert:                "Convert",
+	return result, nil
 }
 
 // CurrencyServiceClient is the client API for CurrencyService service.
@@ -611,10 +348,6 @@ type arpcCurrencyServiceClient struct {
 }
 
 func NewCurrencyServiceClient(client *rpc.Client) CurrencyServiceClient {
-	// Create and register service registry
-	registry := rpc.NewServiceRegistry()
-	registry.RegisterService("CurrencyService", ServiceID_CurrencyService, CurrencyService_methodNameToID)
-	client.SetServiceRegistry(registry)
 	return &arpcCurrencyServiceClient{client: client}
 }
 
@@ -642,83 +375,42 @@ type CurrencyServiceServer interface {
 func RegisterCurrencyServiceServer(s *rpc.Server, srv CurrencyServiceServer) {
 	s.RegisterService(&rpc.ServiceDesc{
 		ServiceName: "CurrencyService",
-		ServiceID:   ServiceID_CurrencyService,
 		ServiceImpl: srv,
-		MethodsByID: map[uint32]*rpc.MethodDesc{
-			CurrencyService_MethodID_GetSupportedCurrencies: {
+		Methods: map[string]*rpc.MethodDesc{
+			"GetSupportedCurrencies": {
 				MethodName: "GetSupportedCurrencies",
-				MethodID:   CurrencyService_MethodID_GetSupportedCurrencies,
 				Handler:    _CurrencyService_GetSupportedCurrencies_Handler,
 			},
-			CurrencyService_MethodID_Convert: {
+			"Convert": {
 				MethodName: "Convert",
-				MethodID:   CurrencyService_MethodID_Convert,
 				Handler:    _CurrencyService_Convert_Handler,
 			},
 		},
 	}, srv)
 }
 
-func _CurrencyService_GetSupportedCurrencies_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(EmptyUser)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _CurrencyService_GetSupportedCurrencies_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(EmptyUser)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(CurrencyServiceServer).GetSupportedCurrencies(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(CurrencyServiceServer).GetSupportedCurrencies(ctx, req.Payload.(*EmptyUser))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
+	return result, nil
 }
 
-func _CurrencyService_Convert_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(CurrencyConversionRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _CurrencyService_Convert_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(CurrencyConversionRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(CurrencyServiceServer).Convert(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(CurrencyServiceServer).Convert(ctx, req.Payload.(*CurrencyConversionRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
-}
-
-// Method IDs for PaymentService
-const (
-	PaymentService_MethodID_Charge = 1
-)
-
-// Method name <-> ID mappings for PaymentService
-var PaymentService_methodNameToID = map[string]uint32{
-	"Charge": PaymentService_MethodID_Charge,
-}
-
-var PaymentService_methodIDToName = map[uint32]string{
-	PaymentService_MethodID_Charge: "Charge",
+	return result, nil
 }
 
 // PaymentServiceClient is the client API for PaymentService service.
@@ -731,10 +423,6 @@ type arpcPaymentServiceClient struct {
 }
 
 func NewPaymentServiceClient(client *rpc.Client) PaymentServiceClient {
-	// Create and register service registry
-	registry := rpc.NewServiceRegistry()
-	registry.RegisterService("PaymentService", ServiceID_PaymentService, PaymentService_methodNameToID)
-	client.SetServiceRegistry(registry)
 	return &arpcPaymentServiceClient{client: client}
 }
 
@@ -753,54 +441,26 @@ type PaymentServiceServer interface {
 func RegisterPaymentServiceServer(s *rpc.Server, srv PaymentServiceServer) {
 	s.RegisterService(&rpc.ServiceDesc{
 		ServiceName: "PaymentService",
-		ServiceID:   ServiceID_PaymentService,
 		ServiceImpl: srv,
-		MethodsByID: map[uint32]*rpc.MethodDesc{
-			PaymentService_MethodID_Charge: {
+		Methods: map[string]*rpc.MethodDesc{
+			"Charge": {
 				MethodName: "Charge",
-				MethodID:   PaymentService_MethodID_Charge,
 				Handler:    _PaymentService_Charge_Handler,
 			},
 		},
 	}, srv)
 }
 
-func _PaymentService_Charge_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(ChargeRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _PaymentService_Charge_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(ChargeRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(PaymentServiceServer).Charge(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(PaymentServiceServer).Charge(ctx, req.Payload.(*ChargeRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
-}
-
-// Method IDs for EmailService
-const (
-	EmailService_MethodID_SendOrderConfirmation = 1
-)
-
-// Method name <-> ID mappings for EmailService
-var EmailService_methodNameToID = map[string]uint32{
-	"SendOrderConfirmation": EmailService_MethodID_SendOrderConfirmation,
-}
-
-var EmailService_methodIDToName = map[uint32]string{
-	EmailService_MethodID_SendOrderConfirmation: "SendOrderConfirmation",
+	return result, nil
 }
 
 // EmailServiceClient is the client API for EmailService service.
@@ -813,10 +473,6 @@ type arpcEmailServiceClient struct {
 }
 
 func NewEmailServiceClient(client *rpc.Client) EmailServiceClient {
-	// Create and register service registry
-	registry := rpc.NewServiceRegistry()
-	registry.RegisterService("EmailService", ServiceID_EmailService, EmailService_methodNameToID)
-	client.SetServiceRegistry(registry)
 	return &arpcEmailServiceClient{client: client}
 }
 
@@ -835,54 +491,26 @@ type EmailServiceServer interface {
 func RegisterEmailServiceServer(s *rpc.Server, srv EmailServiceServer) {
 	s.RegisterService(&rpc.ServiceDesc{
 		ServiceName: "EmailService",
-		ServiceID:   ServiceID_EmailService,
 		ServiceImpl: srv,
-		MethodsByID: map[uint32]*rpc.MethodDesc{
-			EmailService_MethodID_SendOrderConfirmation: {
+		Methods: map[string]*rpc.MethodDesc{
+			"SendOrderConfirmation": {
 				MethodName: "SendOrderConfirmation",
-				MethodID:   EmailService_MethodID_SendOrderConfirmation,
 				Handler:    _EmailService_SendOrderConfirmation_Handler,
 			},
 		},
 	}, srv)
 }
 
-func _EmailService_SendOrderConfirmation_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(SendOrderConfirmationRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _EmailService_SendOrderConfirmation_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(SendOrderConfirmationRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(EmailServiceServer).SendOrderConfirmation(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(EmailServiceServer).SendOrderConfirmation(ctx, req.Payload.(*SendOrderConfirmationRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
-}
-
-// Method IDs for CheckoutService
-const (
-	CheckoutService_MethodID_PlaceOrder = 1
-)
-
-// Method name <-> ID mappings for CheckoutService
-var CheckoutService_methodNameToID = map[string]uint32{
-	"PlaceOrder": CheckoutService_MethodID_PlaceOrder,
-}
-
-var CheckoutService_methodIDToName = map[uint32]string{
-	CheckoutService_MethodID_PlaceOrder: "PlaceOrder",
+	return result, nil
 }
 
 // CheckoutServiceClient is the client API for CheckoutService service.
@@ -895,10 +523,6 @@ type arpcCheckoutServiceClient struct {
 }
 
 func NewCheckoutServiceClient(client *rpc.Client) CheckoutServiceClient {
-	// Create and register service registry
-	registry := rpc.NewServiceRegistry()
-	registry.RegisterService("CheckoutService", ServiceID_CheckoutService, CheckoutService_methodNameToID)
-	client.SetServiceRegistry(registry)
 	return &arpcCheckoutServiceClient{client: client}
 }
 
@@ -917,54 +541,26 @@ type CheckoutServiceServer interface {
 func RegisterCheckoutServiceServer(s *rpc.Server, srv CheckoutServiceServer) {
 	s.RegisterService(&rpc.ServiceDesc{
 		ServiceName: "CheckoutService",
-		ServiceID:   ServiceID_CheckoutService,
 		ServiceImpl: srv,
-		MethodsByID: map[uint32]*rpc.MethodDesc{
-			CheckoutService_MethodID_PlaceOrder: {
+		Methods: map[string]*rpc.MethodDesc{
+			"PlaceOrder": {
 				MethodName: "PlaceOrder",
-				MethodID:   CheckoutService_MethodID_PlaceOrder,
 				Handler:    _CheckoutService_PlaceOrder_Handler,
 			},
 		},
 	}, srv)
 }
 
-func _CheckoutService_PlaceOrder_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(PlaceOrderRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _CheckoutService_PlaceOrder_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(PlaceOrderRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(CheckoutServiceServer).PlaceOrder(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(CheckoutServiceServer).PlaceOrder(ctx, req.Payload.(*PlaceOrderRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
-}
-
-// Method IDs for AdService
-const (
-	AdService_MethodID_GetAds = 1
-)
-
-// Method name <-> ID mappings for AdService
-var AdService_methodNameToID = map[string]uint32{
-	"GetAds": AdService_MethodID_GetAds,
-}
-
-var AdService_methodIDToName = map[uint32]string{
-	AdService_MethodID_GetAds: "GetAds",
+	return result, nil
 }
 
 // AdServiceClient is the client API for AdService service.
@@ -977,10 +573,6 @@ type arpcAdServiceClient struct {
 }
 
 func NewAdServiceClient(client *rpc.Client) AdServiceClient {
-	// Create and register service registry
-	registry := rpc.NewServiceRegistry()
-	registry.RegisterService("AdService", ServiceID_AdService, AdService_methodNameToID)
-	client.SetServiceRegistry(registry)
 	return &arpcAdServiceClient{client: client}
 }
 
@@ -999,38 +591,24 @@ type AdServiceServer interface {
 func RegisterAdServiceServer(s *rpc.Server, srv AdServiceServer) {
 	s.RegisterService(&rpc.ServiceDesc{
 		ServiceName: "AdService",
-		ServiceID:   ServiceID_AdService,
 		ServiceImpl: srv,
-		MethodsByID: map[uint32]*rpc.MethodDesc{
-			AdService_MethodID_GetAds: {
+		Methods: map[string]*rpc.MethodDesc{
+			"GetAds": {
 				MethodName: "GetAds",
-				MethodID:   AdService_MethodID_GetAds,
 				Handler:    _AdService_GetAds_Handler,
 			},
 		},
 	}, srv)
 }
 
-func _AdService_GetAds_Handler(srv any, ctx context.Context, dec func(any) error, req *element.RPCRequest, chain *element.RPCElementChain) (*element.RPCResponse, context.Context, error) {
-	req.Payload = new(AdRequest)
-	if err := dec(req.Payload); err != nil {
-		return nil, ctx, err
+func _AdService_GetAds_Handler(srv any, ctx context.Context, dec func(any) error) (any, error) {
+	req := new(AdRequest)
+	if err := dec(req); err != nil {
+		return nil, err
 	}
-	req, ctx, err := chain.ProcessRequest(ctx, req)
+	result, _, err := srv.(AdServiceServer).GetAds(ctx, req)
 	if err != nil {
-		return nil, ctx, err
+		return nil, err
 	}
-	result, ctx, err := srv.(AdServiceServer).GetAds(ctx, req.Payload.(*AdRequest))
-	if err != nil {
-		return nil, ctx, err
-	}
-	resp := &element.RPCResponse{
-		ID:     req.ID,
-		Result: result,
-	}
-	resp, ctx, err = chain.ProcessResponse(ctx, resp)
-	if err != nil {
-		return nil, ctx, err
-	}
-	return resp, ctx, err
+	return result, nil
 }

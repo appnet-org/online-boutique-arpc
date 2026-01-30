@@ -79,7 +79,7 @@ spec:
           limits:
             cpu: 1000m
       - name: symphony-proxy
-        image: appnetorg/symphony-proxy:latest
+        image: appnetorg/symphony-proxy-h2:latest
         command:
         - /app/proxy
         securityContext:

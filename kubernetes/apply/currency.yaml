@@ -13,7 +13,7 @@ spec:
   ports:
   - port: 11003
     targetPort: 11003
-    name: arpc-currency
+    name: arpc-h2-currency
     protocol: UDP
   selector:
     app: currency
@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-currency
       containers:
       - name: currency
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-h2:latest
         command: ["/app/onlineboutique"]
         args: ["currency"]
         imagePullPolicy: Always

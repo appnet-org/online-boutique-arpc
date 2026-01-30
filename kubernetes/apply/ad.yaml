@@ -13,7 +13,7 @@ spec:
   ports:
   - port: 11009
     targetPort: 11009
-    name: arpc-ad
+    name: arpc-h2-ad
     protocol: UDP
   selector:
     app: ad
@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-ad
       containers:
       - name: ad
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-h2:latest
         command: ["/app/onlineboutique"]
         args: ["ad"]
         imagePullPolicy: Always

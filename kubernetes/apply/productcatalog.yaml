@@ -13,7 +13,7 @@ spec:
   ports:
   - port: 11002
     targetPort: 11002
-    name: arpc-productcatalog
+    name: arpc-h2-productcatalog
     protocol: UDP
   selector:
     app: productcatalog
@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-productcatalog
       containers:
       - name: productcatalog
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-h2:latest
         command: ["/app/onlineboutique"]
         args: ["productcatalog"]
         imagePullPolicy: Always

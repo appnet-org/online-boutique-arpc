@@ -3,14 +3,17 @@ module github.com/appnetorg/online-boutique-arpc/proto
 go 1.24.0
 
 require (
-	github.com/appnet-org/arpc v0.0.0-20260127065040-422057d11fe2
+	github.com/appnet-org/arpc-h2 v0.0.0-20260130202535-82e7f4fc2e5a
 	google.golang.org/protobuf v1.36.10
 )
 
 require (
-	capnproto.org/go/capnp/v3 v3.1.0-alpha.1 // indirect
+	capnproto.org/go/capnp/v3 v3.1.0-alpha.2 // indirect
+	github.com/appnet-org/arpc v0.0.0-20251112212958-aacf858e4d75 // indirect
 	github.com/colega/zeropool v0.0.0-20230505084239-6fb4a4f75381 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
+	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/text v0.17.0 // indirect
 )

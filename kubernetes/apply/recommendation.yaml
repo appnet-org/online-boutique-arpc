@@ -13,7 +13,7 @@ spec:
   ports:
   - port: 11008
     targetPort: 11008
-    name: arpc-recommendation
+    name: arpc-h2-recommendation
     protocol: UDP
   selector:
     app: recommendation
@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-recommendation
       containers:
       - name: recommendation
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-h2:latest
         command: ["/app/onlineboutique"]
         args: ["recommendation"]
         imagePullPolicy: Always

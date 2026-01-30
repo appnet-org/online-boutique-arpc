@@ -13,7 +13,7 @@ spec:
   ports:
   - port: 11005
     targetPort: 11005
-    name: arpc-shipping
+    name: arpc-h2-shipping
     protocol: UDP
   selector:
     app: shipping
@@ -44,7 +44,7 @@ spec:
       serviceAccountName: onlineboutique-shipping
       containers:
       - name: shipping
-        image: appnetorg/onlineboutique-arpc:latest
+        image: appnetorg/onlineboutique-arpc-h2:latest
         command: ["/app/onlineboutique"]
         args: ["shipping"]
         imagePullPolicy: Always

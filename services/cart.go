@@ -7,10 +7,10 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/appnet-org/arpc/pkg/logging"
-	"github.com/appnet-org/arpc/pkg/rpc"
-	"github.com/appnet-org/arpc/pkg/rpc/element"
-	"github.com/appnet-org/arpc/pkg/serializer"
+	"github.com/appnet-org/arpc-h2/pkg/logging"
+	"github.com/appnet-org/arpc-h2/pkg/rpc"
+	"github.com/appnet-org/arpc-h2/pkg/rpc/element"
+	"github.com/appnet-org/arpc-h2/pkg/serializer"
 	"github.com/redis/go-redis/v9"
 
 	pb "github.com/appnetorg/online-boutique-arpc/proto"
@@ -47,7 +47,7 @@ func (s *CartService) Run() error {
 
 	serializer := &serializer.SymphonySerializer{}
 	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
-	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements)
+	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements...)
 	if err != nil {
 		log.Fatalf("Failed to start aRPC server: %v", err)
 	}
