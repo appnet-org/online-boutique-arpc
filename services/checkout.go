@@ -85,7 +85,7 @@ func (cs *CheckoutService) Run() error {
 	mustConnARPC(&cs.paymentSvcConn, cs.paymentSvcAddr)
 
 	// Create ARPC server
-	serializer := &serializer.SymphonySerializer{}
+	serializer := &serializer.ProtoSerializer{}
 	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(cs.port), serializer, rpcElements...)
 	if err != nil {

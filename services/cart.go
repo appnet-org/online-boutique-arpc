@@ -45,7 +45,7 @@ func (s *CartService) Run() error {
 		Addr: s.cartRedisAddr,
 	})
 
-	serializer := &serializer.SymphonySerializer{}
+	serializer := &serializer.ProtoSerializer{}
 	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements...)
 	if err != nil {

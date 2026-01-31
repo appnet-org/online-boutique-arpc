@@ -92,7 +92,7 @@ func (s *PaymentService) Run() error {
 		panic(fmt.Sprintf("Failed to initialize logging: %v", err))
 	}
 
-	serializer := &serializer.SymphonySerializer{}
+	serializer := &serializer.ProtoSerializer{}
 	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements...)
 	if err != nil {

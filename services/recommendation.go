@@ -43,7 +43,7 @@ func (s *RecommendationService) Run() error {
 	mustConnARPC(&s.productCatalogSvcConn, s.productCatalogSvcAddr)
 
 	// Create ARPC server
-	serializer := &serializer.SymphonySerializer{}
+	serializer := &serializer.ProtoSerializer{}
 	rpcElements := []element.RPCElement{tracing.NewServerTracingElement()}
 	server, err := rpc.NewServer("0.0.0.0:"+strconv.Itoa(s.port), serializer, rpcElements...)
 	if err != nil {
