@@ -4,11 +4,8 @@ go 1.24.0
 
 replace github.com/appnetorg/online-boutique-arpc/services => ./services
 
-replace github.com/appnetorg/online-boutique-arpc/proto => ./proto
-
 require (
-	github.com/appnet-org/arpc v0.0.0-20260127065040-422057d11fe2
-	github.com/appnetorg/online-boutique-arpc/proto v0.0.0-00010101000000-000000000000
+	github.com/appnet-org/arpc v0.0.0-20260131224146-a35cc8dfb4ab
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/google/uuid v1.6.0
 	github.com/opentracing/opentracing-go v1.2.0
