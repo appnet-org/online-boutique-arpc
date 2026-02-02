@@ -2,22 +2,25 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+pushd "$SCRIPT_DIR" > /dev/null
+
 # --- Configuration ---
 USER="appnetorg"
 TAG="latest"
 IMAGE="onlineboutique-arpc"
-YAML_DIR="kubernetes/apply"
 UPDATE_ARPC="1"  # Set to "1" to update aRPC dependency to latest main, "0" to use pinned version
+YAML_DIR="kubernetes/apply"
 # ---
 
-# Optionally refresh the aRPC dependency before building
-if [ "$UPDATE_ARPC" = "1" ]; then
-  echo "Updating aRPC dependency to latest main..."
-  go get -u github.com/appnet-org/arpc@main
-  go mod tidy
-else
-  echo "Using pinned aRPC version from go.mod"
-fi
+# # Optionally refresh the aRPC dependency before building
+# if [ "$UPDATE_ARPC" = "1" ]; then
+#   echo "Updating aRPC dependency to latest main..."
+#   go get -u github.com/appnet-org/arpc@main
+#   go mod tidy
+# else
+#   echo "Using pinned aRPC version from go.mod"
+# fi
 
 # 1. Update Kubernetes YAML files to use the new image
 echo "Updating YAML files in $YAML_DIR..."
@@ -34,5 +37,7 @@ sudo docker build -t "$NEW_IMAGE" -f Dockerfile .
 # 3. Push the Docker image
 echo "Pushing Docker image: $NEW_IMAGE"
 sudo docker push "$NEW_IMAGE"
+
+popd > /dev/null
 
 echo "✅ Process complete."
