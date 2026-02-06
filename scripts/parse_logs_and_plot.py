@@ -99,7 +99,13 @@ def extract_sizes_by_lib(messages, serialization_libs):
             if lib in sizes:
                 if lib not in sizes_by_lib:
                     sizes_by_lib[lib] = []
-                sizes_by_lib[lib].append(sizes[lib])
+                # Add 4 bytes overhead for fRPC and fRPC (B-Opt)
+                size = sizes[lib]
+                if lib in ('symphony'):
+                    size += 10
+                if lib in ('symphony_hybrid'):
+                    size += 4
+                sizes_by_lib[lib].append(size)
     
     if skipped_count > 0:
         print(f"Messages skipped due to 0-size serialization: {skipped_count}")
@@ -154,15 +160,13 @@ def process_logs_directory(logs_dir, application_name):
 
 
 def plot_merged_cdfs(data_left, data_right,
-                    #  x_labels=('Online Boutique\nMessage Size (bytes)', 
-                    #           'Hotel Reservation\nMessage Size (bytes)'),
-                    x_labels=('Online Boutique (bytes)', 
-                                'Hotel Reservation (bytes)'),
+                     titles=('Online Boutique', 'Hotel Reservation'),
+                     x_label='Message Size (bytes)',
                      output_filename="cdf_message_sizes.pdf",
                      system_order=None):
     """
     Plots two CDFs side-by-side with shared legend at bottom.
-    Titles are removed; X-axis labels differentiate the plots.
+    Application names are shown as titles at the top of each subplot.
     """
     
     # 1. Setup Figure (1 row, 2 columns)
@@ -199,11 +203,14 @@ def plot_merged_cdfs(data_left, data_right,
         ax.set_yticks([0, 0.25, 0.50, 0.75, 1.0])
         ax.set_yticklabels(['0', '25', '50', '75', '100'])
         
+        # Title at the top for application name
+        ax.set_title(titles[idx], fontsize=14)
+        
         # Y-label only on the left plot
         ax.set_ylabel('CDF (%)' if idx == 0 else "")
         
-        # X-labels customized
-        ax.set_xlabel(x_labels[idx], fontsize=14)
+        # X-label (same for both plots)
+        ax.set_xlabel(x_label, fontsize=14)
         
         ax.set_xscale('log')
         ax.grid(True, which="major", ls="-", alpha=0.3)
@@ -214,7 +221,7 @@ def plot_merged_cdfs(data_left, data_right,
     
     fig.legend(handles, labels,
                loc='lower center',
-               bbox_to_anchor=(0.5, -0.20),
+               bbox_to_anchor=(0.5, -0.10),
                ncol=5,
                frameon=True,
                columnspacing=1.5,
@@ -240,7 +247,7 @@ def main():
     # Hotel reservation logs directory (using boutique as placeholder for now)
     # hotel_logs_dir = script_dir / '../hotel_logs'
     # hotel_logs_dir = hotel_logs_dir.resolve()
-    hotel_logs_dir = Path('/users/xzhu/hotel-reservation-arpc/logs_filtered')
+    hotel_logs_dir = Path('/users/xzhu/compiler/compiler/experiments/arpc-sigcomm/hotel-reservation-arpc/logs')
     
     
     # Check if hotel logs directory exists, if not use boutique as placeholder
@@ -264,8 +271,8 @@ def main():
     # Plot merged CDFs
     output_file = script_dir / 'boutique_and_hotel_serialization_size_cdf.pdf'
     plot_merged_cdfs(boutique_data, hotel_data,
-                     x_labels=('Online Boutique\nMessage Size (bytes)', 
-                              'Hotel Reservation\nMessage Size (bytes)'),
+                     titles=('Online Boutique', 'Hotel Reservation'),
+                     x_label='Message Size (bytes)',
                      output_filename=str(output_file),
                      system_order=system_order)
     
