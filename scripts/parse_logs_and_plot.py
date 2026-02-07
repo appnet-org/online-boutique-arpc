@@ -204,13 +204,13 @@ def plot_merged_cdfs(data_left, data_right,
         ax.set_yticklabels(['0', '25', '50', '75', '100'])
         
         # Title at the top for application name
-        ax.set_title(titles[idx], fontsize=14)
+        ax.set_title(titles[idx], fontsize=16)
         
         # Y-label only on the left plot
         ax.set_ylabel('CDF (%)' if idx == 0 else "")
         
         # X-label (same for both plots)
-        ax.set_xlabel(x_label, fontsize=14)
+        ax.set_xlabel(x_label, fontsize=16)
         
         ax.set_xscale('log')
         ax.grid(True, which="major", ls="-", alpha=0.3)
